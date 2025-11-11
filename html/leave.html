@@ -58,6 +58,40 @@
       <button id="logoutBtn" class="btn btn-secondary">Logout</button>
     </div>
   </div>
+<!-- Leave Request Modal -->
+<div id="leaveModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" id="closeModal">&times;</span>
+    <h3>New Leave Request</h3>
+
+    <form id="leaveForm">
+      <label for="employee">Employee</label>
+      <input type="text" id="employee" placeholder="Enter employee name" required>
+
+      <label for="leaveType">Leave Type</label>
+      <input type="text" id="leaveType" placeholder="Enter leave type" required>
+
+      <div class="date-row">
+        <div>
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" required>
+        </div>
+        <div>
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" required>
+        </div>
+      </div>
+
+      <label for="reason">Reason</label>
+      <textarea id="reason" rows="3" placeholder="Enter reason"></textarea>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
+        <button type="submit" class="btn-submit">Submit Request</button>
+      </div>
+    </form>
+  </div>
+</div>
 
   <script src="../js/leave.js"></script>
   <script>
@@ -65,5 +99,6 @@
       window.location.href = 'index.html';
     }
   </script>
+  
 </body>
 </html>
