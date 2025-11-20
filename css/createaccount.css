@@ -15,7 +15,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 470px;
+  max-width: 500px;
   padding: 20px;
 }
 
@@ -127,4 +127,10 @@ input:focus {
   .row {
     flex-direction: column;
   }
+}
+.logo-img {
+    width: 70px;      /* adjust size here */
+    height: auto;
+    display: block;
+    margin: 0 auto 10px; /* center + spacing */
 }

@@ -272,3 +272,9 @@ body {
         margin: 20% auto;
     }
 }
+.logo-img {
+    width: 70px;      /* adjust size here */
+    height: auto;
+    display: block;
+    margin: 0 auto 10px; /* center + spacing */
+}
