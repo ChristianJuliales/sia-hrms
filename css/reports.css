@@ -1,290 +1,336 @@
 /* Reset */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Inter", sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
 }
 
 /* Layout */
 .container {
-  display: flex;
+    display: flex;
 }
 
-/* Sidebar */
+/* Sidebar (Minor enhancements) */
 .sidebar {
-  width: 240px;
-  background: #fff;
-  height: 100vh;
-  border-right: 1px solid #e5e5e5;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+    width: 240px;
+    background: #fff;
+    height: 100vh;
+    border-right: none; 
+    box-shadow: 1px 0 5px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar .logo {
-  color: #16a34a;
-  font-size: 1.4rem;
-  margin-bottom: 5px;
+    color: #16a34a;
+    font-size: 1.4rem;
+    margin-bottom: 5px;
 }
 
 .sidebar .subtitle {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-bottom: 20px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 20px;
 }
 
 .sidebar #welcomeText {
-  font-size: 0.85rem;
-  margin-bottom: 20px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
 }
 
 .nav {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 .nav-item {
-  text-decoration: none;
-  color: #374151;
-  padding: 8px 12px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
+    text-decoration: none;
+    color: #374151;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
 }
 
 .nav-item:hover {
-  background: #f3f4f6;
+    background: #f3f4f6;
 }
 
 .nav-item.active {
-  background: #dcfce7;
-  color: #15803d;
+    background: #dcfce7;
+    color: #15803d;
 }
 
 /* Main Section */
 .main {
-  flex: 1;
-  padding: 30px 40px;
-  background: #f9fafb;
-  min-height: 100vh;
+    flex: 1;
+    padding: 30px 40px;
+    background: #f4f7f9; /* Lighter background */
+    min-height: 100vh;
 }
 
 /* Header */
 .header h2 {
-  font-weight: 600;
+    font-size: 26px;
+    font-weight: 700;
+    color: #333;
 }
 
 .header p {
-  color: #6b7280;
-  font-size: 14px;
+    color: #777;
+    font-size: 14px;
+    margin-bottom: 20px;
 }
 
-/* Tabs */
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0 30px 0;
+/* --- TAB NAVIGATION (Modern Line Style) --- */
+.tab-navigation {
+    display: flex;
+    margin: 15px 0 30px 0;
+    border-bottom: 2px solid #ddd;
 }
-
 .tab-btn {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  padding: 8px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s;
+    background: none;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
 }
-
-.tab-btn:hover {
-  background: #f3f4f6;
-}
-
 .tab-btn.active {
-  background: #dcfce7;
-  color: #15803d;
-  border-color: #bbf7d0;
+    color: #10B981; /* Primary brand color */
+    border-bottom: 3px solid #10B981;
+    background: none;
+}
+.tab-btn:hover {
+    color: #10B981;
 }
 
-/* Cards */
-.report-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+
+/* --- STATS GRID LAYOUT (Modern Look) --- */
+.stats-grid {
+    /* Main layout: 3 equal columns */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
 }
 
 .card {
-  background: #fff;
-  padding: 18px;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); /* Stronger, softer shadow */
+    transition: transform 0.2s ease;
+    border: 1px solid #f0f0f0; /* Soft border */
+}
+.card:hover {
+    transform: translateY(-3px); /* Noticeable lift */
 }
 
-.card h4 {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.card p {
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.card small {
-  color: #6b7280;
-}
-
-/* Two-column section */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-}
-
-.overview {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.overview h4 {
-  font-size: 15px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 15px;
-}
-
-/* Progress bars */
-.progress {
-  height: 8px;
-  width: 100%;
-  background: #f3f4f6;
-  border-radius: 5px;
-  margin: 5px 0;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  border-radius: 5px;
-  transition: width 0.4s ease;
-}
-
-/* Colors */
-.green { background: #86efac; }
-.blue { background: #93c5fd; }
-.yellow { background: #fde68a; }
-.red { background: #fca5a5; }
-
-/* Text under bars */
-.dept span, .status span {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.dept small, .status small {
-  display: block;
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 10px;
-}
-.user-menu {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-.user-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 50px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 10px;
-    min-width: 150px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.dropdown-menu p {
-    margin: 0 0 10px 0;
+/* --- KEY STAT CARDS (Top Row KPIs) --- */
+.key-stat h3 {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 15px;
     font-weight: 500;
-    color: #16a34a;
+}
+.key-stat .number {
+    font-size: 36px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 5px;
+}
+.key-stat .sub-text {
+    font-size: 13px;
+    color: #10B981; /* Positive accent color */
+    font-weight: 500;
+}
+.key-stat .rate-green {
+    color: #10B981; 
 }
 
-.dropdown-menu button {
-    width: 100%;
-    background-color: #16a34a; 
-    color: #fff;               
-    border: none;             
-    padding: 8px 10px;        
-    border-radius: 6px;       
-    cursor: pointer;          
-    transition: background 0.2s;
+
+/* --- CHART PANELS (Wider elements below) --- */
+.chart-panel {
+    grid-column: span 1;
+    min-height: 350px;
+    max-height: 400px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
 }
 
-.dropdown-menu button:hover {
-    background-color: #15803d; 
-}
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
+.chart-panel h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
 }
 
+.chart-panel canvas {
+    flex: 1;
+    max-height: 300px !important;
+}
+
+/* Make Chart Panels Span Correctly */
+.full-width {
+    grid-column: span 3; /* Spans all 3 columns */
+}
+
+.half-width {
+    grid-column: span 1; /* Spans 1 column */
+}
+
+/* --- ATTENDANCE TAB STYLES --- */
 .attendance-cards {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
 }
 
 .summary-card {
-  flex: 1;
-  background: #fff;
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  font-weight: 600;
-  text-align: center;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
 }
 
 .summary-card span {
-  display: block;
-  font-size: 20px;
-  margin-top: 5px;
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 10px;
 }
 
-.summary-card.green { background: #dcfce7; color: #15803d; }
-.summary-card.yellow { background: #fef9c3; color: #a16207; }
-.summary-card.red { background: #fee2e2; color: #b91c1c; }
-.summary-card.gray { background: #f3f4f6; color: #374151; }
+.summary-card.green { border-left: 4px solid #10B981; }
+.summary-card.yellow { border-left: 4px solid #F59E0B; }
+.summary-card.red { border-left: 4px solid #EF4444; }
+.summary-card.gray { border-left: 4px solid #9CA3AF; }
 
+/* Tab Content Visibility */
+.tab-content {
+    display: none !important;
+}
+
+.tab-content.active {
+    display: block !important;
+}
+
+/* Report Tables */
 .report-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #eee; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
 }
 
 .report-table th, .report-table td {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-  font-size: 14px;
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 14px;
+}
+
+.report-table th {
+    background: #f9fafb; 
+    font-weight: 600;
+    color: #333;
+}
+
+.report-table tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* 🟢 FIX FOR USER MENU, AVATAR, AND BROKEN LOGOUT BUTTON */
+/* --- NEW: Moved to Top Right and Increased Icon Size --- */
+/* ------------------------------------------------------------------ */
+
+/* 1. Position the user-menu (Avatar & Dropdown) on the top right */
+.user-menu {
+    position: fixed;
+    /* CHANGE: Remove left/bottom, add top/right */
+    top: 20px; 
+    right: 30px; /* Give a little more margin than the top */
+    z-index: 1000; 
+    cursor: pointer;
+    /* Use flexbox to align the icon/menu vertically, but stack the dropdown */
+    display: flex;
+    flex-direction: column; /* Stacks the dropdown right under the icon */
+    align-items: flex-end; /* Aligns contents to the right (useful for the dropdown) */
+}
+
+/* 2. Style the User Icon/Avatar (Made larger) */
+.user-icon {
+    /* CHANGE: Increased size from 40px to 50px */
+    width: 50px; 
+    height: 50px;
+    border-radius: 50%; 
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1); 
+    border: 2px solid #fff;
+    margin-bottom: 5px; /* Added slight margin below icon */
+}
+
+/* 3. Style the Dropdown Menu (The box containing the Logout button) */
+.dropdown-menu {
+    position: absolute;
+    /* CHANGE: Position the dropdown to open below the icon and aligned to the right */
+    top: 60px; /* Position below the 50px icon + margin */
+    right: 0; /* Aligns the right edge of the dropdown with the icon */
+    
+    width: 180px; 
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    display: none; 
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 4. Style the User Email Display */
+#userEmailDisplay {
+    font-size: 0.9rem;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 5. FIX FOR THE LOGOUT BUTTON */
+#logoutBtn {
+    width: 100%;
+    padding: 8px 15px;
+    font-size: 14px; 
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    text-align: center;
+    background-color: #f3f4f6; 
+    color: #6b7280; 
+    transition: background-color 0.2s;
+}
+
+#logoutBtn:hover {
+    background-color: #e5e7eb;
 }
