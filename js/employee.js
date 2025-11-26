@@ -1,5 +1,5 @@
 // ==================== FIXED employee.js ====================
-// Includes: View-page file-link fix + Photo 2x2 consistency
+// Includes: View-page file-link fix + Photo 2x2 consistency + Professional View Page
 
 (function(){
   /* ---------- Utilities ---------- */
@@ -301,42 +301,140 @@
     const employees = getEmployees();
     const idx = id !== null ? Number(id) : null;
     if (idx === null || isNaN(idx) || !employees[idx]) {
-      alert('Invalid employee ID'); window.location.href = 'employee.html'; return;
+      alert('Invalid employee ID'); 
+      window.location.href = 'employee.html'; 
+      return;
     }
     const emp = employees[idx];
     const content = qs('viewContent');
 
-    const photoHTML = emp.photo ? `<img class="photo-2x2" src="${emp.photo}"><br><br>` : '';
+    // Get initials for placeholder
+    const initials = (emp.firstName.charAt(0) + emp.lastName.charAt(0)).toUpperCase();
 
+    // Photo HTML
+    const photoHTML = emp.photo 
+      ? `<img class="profile-photo" src="${emp.photo}" alt="${emp.firstName} ${emp.lastName}">` 
+      : `<div class="profile-photo-placeholder">${initials}</div>`;
+
+    // Status class
+    const statusClass = `status-${emp.status.toLowerCase()}`;
+
+    // Build profile HTML
     content.innerHTML = `
-      ${photoHTML}
-      <div style="font-size: 18px; line-height: 1.5;">
-        <strong style="text-transform: uppercase;">Employee ID: ${emp.empId}</strong><br>
-        <strong style="text-transform: uppercase;">${emp.lastName}, ${emp.firstName} ${emp.middleName}</strong><br>
-        Email: ${emp.email}<br>
-        Phone: ${emp.phone}<br>
-        Date of Birth:${emp.dob}<br>
-        Gender: ${emp.gender}<br>
-        Address: ${emp.address}<br><br>
-        <strong>Date Hired:</strong>
-        <strong>Position:</strong> ${emp.position}<br>
-        <strong>Department:</strong> ${emp.department}<br>
-        <strong>Status:</strong> ${emp.status}<br>
-        <strong>Salary:</strong> ₱${emp.salary}<br><br>
-        <strong>Uploaded Files:</strong><br>
+      <div class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+          <div class="profile-photo-container">
+            ${photoHTML}
+          </div>
+          <div class="profile-basic-info">
+            <h1 class="employee-name">${emp.lastName}, ${emp.firstName} ${emp.middleName}</h1>
+            <p class="employee-id">Employee ID: ${emp.empId}</p>
+            <div>
+              <span class="employee-position">💼 ${emp.position}</span>
+              <span class="employee-department">🏢 ${emp.department}</span>
+            </div>
+            <div>
+              <span class="status-badge ${statusClass}">${emp.status}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="profile-section">
+          <div class="section-title">📞 Contact Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Email Address</span>
+              <span class="info-value">${emp.email}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Phone Number</span>
+              <span class="info-value">${emp.phone}</span>
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+              <span class="info-label">Address</span>
+              <span class="info-value">${emp.address}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Information -->
+        <div class="profile-section">
+          <div class="section-title">👤 Personal Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Date of Birth</span>
+              <span class="info-value">${emp.dob}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Gender</span>
+              <span class="info-value">${emp.gender}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employment Details -->
+        <div class="profile-section">
+          <div class="section-title">💼 Employment Details</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Date Hired</span>
+              <span class="info-value">${emp.dateHired}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Employment Status</span>
+              <span class="info-value">${emp.status}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Position</span>
+              <span class="info-value">${emp.position}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Department</span>
+              <span class="info-value">${emp.department}</span>
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+              <span class="info-label">Monthly Salary</span>
+              <span class="info-value salary-highlight">₱${Number(emp.salary).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Uploaded Files -->
+        <div class="profile-section">
+          <div class="section-title">📎 Uploaded Documents</div>
+          <div class="files-list" id="filesList"></div>
+        </div>
       </div>
     `;
 
-    const filesContainer = document.createElement('div');
-    (emp.files || []).forEach(f => {
-      const node = createDownloadLinkFromBase64(f.data, f.name);
-      node.style.display = 'block';
-      node.style.marginBottom = '6px';
-      filesContainer.appendChild(node);
-    });
-    content.appendChild(filesContainer);
-    
+    // Add files
+    const filesContainer = content.querySelector('#filesList');
+    if (emp.files && emp.files.length > 0) {
+      emp.files.forEach(f => {
+        const fileItem = document.createElement('a');
+        fileItem.className = 'file-item';
+        fileItem.href = f.data;
+        fileItem.download = f.name;
+        
+        // Determine file icon based on extension
+        const ext = f.name.split('.').pop().toLowerCase();
+        let icon = '📄';
+        if (['pdf'].includes(ext)) icon = '📕';
+        if (['doc', 'docx'].includes(ext)) icon = '📘';
+        if (['jpg', 'jpeg', 'png'].includes(ext)) icon = '🖼️';
+        
+        fileItem.innerHTML = `
+          <span class="file-icon">${icon}</span>
+          <span class="file-name">${f.name}</span>
+          <span class="download-icon">⬇️</span>
+        `;
+        filesContainer.appendChild(fileItem);
+      });
+    } else {
+      filesContainer.innerHTML = '<div class="no-files">No documents uploaded</div>';
+    }
   }
 
 })();
-
