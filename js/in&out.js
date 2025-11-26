@@ -237,25 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateButtonState();
 });
 
-/* ===============================
-   IN & OUT SYSTEM
-================================ */
-
-const empId = document.getElementById("inputEmpId");
-const empName = document.getElementById("inputName");
-const empDept = document.getElementById("inputDepartment");
-const empPos = document.getElementById("inputPosition");
-
-const btnIn = document.getElementById("btnTimeIn");
-const btnOut = document.getElementById("btnTimeOut");
-const alertBox = document.getElementById("alertBox");
-
-function showAlert(type, msg) {
-    alertBox.className = "alert show " + type;
-    alertBox.innerText = msg;
-    setTimeout(() => alertBox.classList.remove("show"), 3000);
-}
-
 // Load attendance from localStorage
 function loadAttendance() {
     return JSON.parse(localStorage.getItem("attendance")) || [];
