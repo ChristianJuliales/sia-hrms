@@ -4,10 +4,49 @@
 const ATT_KEY = "attendance_records";
 
 function getRecords() {
-    return JSON.parse(localStorage.getItem(ATT_KEY)) || [];
+    try {
+        return JSON.parse(localStorage.getItem(ATT_KEY)) || [];
+    } catch (e) {
+        console.error("Failed to parse attendance records:", e);
+        return [];
+    }
 }
 function saveRecords(data) {
     localStorage.setItem(ATT_KEY, JSON.stringify(data));
+}
+
+/* ===============================
+   HELPERS
+================================ */
+// Parse a time string like "08:30:00 AM" into seconds since 00:00
+function parseTimeToSeconds(t) {
+    if (!t) return null;
+    // Accept either "HH:MM:SS AM/PM" or "H:MM:SS AM/PM"
+    const m = t.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+    if (!m) return null;
+    let hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    const ss = parseInt(m[3], 10);
+    const ampm = m[4].toUpperCase();
+    if (ampm === "AM") {
+        if (hh === 12) hh = 0;
+    } else {
+        if (hh !== 12) hh += 12;
+    }
+    return hh * 3600 + mm * 60 + ss;
+}
+
+function computeHours(timeIn, timeOut) {
+    if (!timeIn || !timeOut) return "--";
+    const s1 = parseTimeToSeconds(timeIn);
+    const s2 = parseTimeToSeconds(timeOut);
+    if (s1 === null || s2 === null) return "--";
+    let diffSec = s2 - s1;
+    // crossing midnight?
+    if (diffSec < 0) diffSec += 24 * 3600;
+    const hours = diffSec / 3600;
+    // round to 2 decimals
+    return hours.toFixed(2);
 }
 
 /* ===============================
@@ -38,10 +77,13 @@ if (window.location.pathname.includes("attendance.html")) {
 
         const all = getRecords();
 
-        // Filter by date + search
+        // Filter by date + search (search both id & name)
         filteredData = all.filter(r =>
             r.date === selectedDate &&
-            r.name.toLowerCase().includes(searchValue)
+            (
+                (r.name || "").toLowerCase().includes(searchValue) ||
+                (r.id || "").toLowerCase().includes(searchValue)
+            )
         );
 
         updateTotalAttendance(filteredData.length);
@@ -72,63 +114,47 @@ if (window.location.pathname.includes("attendance.html")) {
        Render Table Rows
     ----------------------------------- */
     function renderTable(list) {
-    let html = `
-    <thead>
-        <tr>
-          <th>EMPLOYEE ID</th>
-          <th>EMPLOYEE NAME</th>
-          <th>DEPARTMENT</th>
-          <th>POSITION</th>
-          <th>DATE</th>
-          <th>TIME IN</th>
-          <th>TIME OUT</th>
-          <th>ACTIONS</th>
-        </tr>
-    </thead>
-    <tbody>
-    `;
-
-    if (list.length === 0) {
-        html += `<tr><td colspan="8" style="text-align:center;">No records found</td></tr>`;
-    } else {
-        list.forEach(r => {
-            const showLogout = r.timeOut === "--";
-
-            html += `
+        let html = `
+        <thead>
             <tr>
-                <td>${r.id}</td>
-                <td>${r.name}</td>
-                <td>${r.department}</td>
-                <td>${r.position}</td>
-                <td>${r.date}</td>
-                <td>${r.timeIn}</td>
-                <td>${r.timeOut}</td>
-                <td>
-                    ${
-                        showLogout
-                        ? `<button 
-                                onclick="goLogout('${r.id}')"
-                                style="
-                                    background: #e74c3c;
-                                    color: white;
-                                    border: none;
-                                    padding: 6px 10px;
-                                    border-radius: 4px;
-                                    cursor: pointer;
-                                    font-weight: bold;
-                                "
-                           >Logout</button>`
-                        : `<span style="color: gray; font-size: 12px;">Completed</span>`
-                    }
-                </td>
-            </tr>`;
-        });
+              <th>EMPLOYEE ID</th>
+              <th>EMPLOYEE NAME</th>
+              <th>DEPARTMENT</th>
+              <th>POSITION</th>
+              <th>DATE</th>
+              <th>TIME IN</th>
+              <th>TIME OUT</th>
+              <th>TOTAL HOURS</th>
+            </tr>
+        </thead>
+        <tbody>
+        `;
+
+        if (list.length === 0) {
+            html += `<tr><td colspan="9" style="text-align:center;">No records found</td></tr>`;
+        } else {
+            list.forEach(r => {
+                const showLogout = r.timeOut === null;
+                const timeOutDisplay = r.timeOut ? r.timeOut : "--";
+                const totalHours = computeHours(r.timeIn, r.timeOut);
+
+                html += `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.name}</td>
+                    <td>${r.department}</td>
+                    <td>${r.position}</td>
+                    <td>${r.date}</td>
+                    <td>${r.timeIn}</td>
+                    <td>${timeOutDisplay}</td>
+                    <td>${totalHours}</td>
+                </tr>`;
+            });
+        }
+
+        html += `</tbody>`;
+        tableElement.innerHTML = html;
     }
-
-    html += `</tbody>`;
-    tableElement.innerHTML = html;
-}
-
 
     /* -----------------------------------
        Pagination Buttons
@@ -146,12 +172,14 @@ if (window.location.pathname.includes("attendance.html")) {
             tableElement.insertAdjacentElement("afterend", paginationDiv);
         }
 
-        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
 
         paginationDiv.innerHTML = `
-            <button style ="background: #8e44ad; color: white; border: none; padding: 6px; border-radius: 3px;" ${currentPage === 1 ? "disabled" : ""} onclick="prevPage()">Previous</button>
-            <span>Page ${currentPage} of ${totalPages || 1}</span>
-            <button style ="background: #8e44ad; color: white; border: none; padding: 6px; border-radius: 3px;" ${currentPage === totalPages ? "disabled" : ""} onclick="nextPage()">Next</button>
+            <div style = "display: flex; justify-content: center;">
+            <button style ="background: #8e44ad; color: white; border: none; padding: 10px; border-radius: 3px;" ${currentPage === 1 ? "disabled" : ""} onclick="prevPage()">Previous</button>
+            <span>Page ${currentPage} of ${totalPages}</span>
+            <button style ="background: #8e44ad; color: white; border: none; padding: 10px; border-radius: 3px;" ${currentPage === totalPages ? "disabled" : ""} onclick="nextPage()">Next</button>
+            </div>
         `;
     }
 
@@ -170,141 +198,17 @@ if (window.location.pathname.includes("attendance.html")) {
         }
     };
 
-    /* -----------------------------------
-       Logout navigation
-    ----------------------------------- */
-    window.goLogout = function(empId) {
-        localStorage.setItem("logout_id", empId);
-        window.location.href = "attendance_logout.html";
-    };
-
     /* EVENT LISTENERS */
     dateInput.addEventListener("change", () => { currentPage = 1; loadTable(); });
     searchInput.addEventListener("input", () => { currentPage = 1; loadTable(); });
 
-    document.querySelector(".btn-green").addEventListener("click", () => {
-        window.location.href = "attendance_login.html";
-    });
+    // If you have a button to add manual Time In (btn-green), ensure it exists before adding handler
+    const btnGreen = document.querySelector(".btn-green");
+    if (btnGreen) {
+        btnGreen.addEventListener("click", () => {
+            window.location.href = "attendance_login.html";
+        });
+    }
 
     loadTable();
 }
-
-/* ===============================
-   PAGE: attendance_login.html
-================================ */
-if (window.location.pathname.includes("attendance_login.html")) {
-
-    const form = document.querySelector("form");
-
-    form.addEventListener("submit", e => {
-        e.preventDefault();
-
-        const inputs = form.querySelectorAll("input");
-
-        const id = inputs[0].value;
-        const name = inputs[1].value;
-        const department = inputs[2].value;
-        const position = inputs[3].value;
-
-        if (!id || !name) {
-            alert("Please fill in Employee ID and Name");
-            return;
-        }
-
-        const now = new Date();
-        const date = now.toISOString().split("T")[0];
-        const time = now.toLocaleTimeString();
-
-        const all = getRecords();
-
-        // PREVENT DUPLICATE LOGIN ON SAME DAY
-        const alreadyLoggedIn = all.some(r =>
-            r.id === id &&
-            r.date === date &&
-            r.timeOut === "--"
-        );
-
-        if (alreadyLoggedIn) {
-            alert("This employee already logged in today and has not logged out!");
-            return;
-        }
-
-        const newRecord = {
-            id,
-            name,
-            department,
-            position,
-            date,
-            timeIn: time,
-            timeOut: "--"
-        };
-
-        all.push(newRecord);
-        saveRecords(all);
-
-        alert("Attendance Logged Successfully!");
-        window.location.href = "attendance.html";
-    });
-}
-
-/* ===============================
-   PAGE: attendance_logout.html
-================================ */
-if (window.location.pathname.includes("attendance_logout.html")) {
-
-    const form = document.querySelector("form");
-    const inputs = form.querySelectorAll("input");
-
-    const logoutId = localStorage.getItem("logout_id");
-
-    // Auto-fill logout form
-    if (logoutId) {
-        const all = getRecords();
-        const rec = [...all].reverse().find(r =>
-            r.id === logoutId && r.timeOut === "--"
-        );
-
-        if (rec) {
-            inputs[0].value = rec.id;
-            inputs[1].value = rec.name;
-            inputs[2].value = rec.department;
-            inputs[3].value = rec.position;
-        }
-    }
-
-    form.addEventListener("submit", e => {
-        e.preventDefault();
-
-        const enteredId = inputs[0].value.trim();
-
-        const all = getRecords();
-
-        // Find an employee who is currently logged in (timeOut == "--")
-        const rec = [...all].reverse().find(r =>
-            r.id === enteredId && r.timeOut === "--"
-        );
-
-        if (!rec) {
-            alert("No active login found for this Employee ID!");
-            return;
-        }
-
-        // If auto-fill is used, still ensure matched properly
-        if (logoutId && enteredId !== logoutId) {
-            alert("Employee ID does not match the auto-filled record!");
-            return;
-        }
-
-        // Process logout
-        const now = new Date();
-        rec.timeOut = now.toLocaleTimeString();
-
-        saveRecords(all);
-
-        alert("Successfully Logged Out!");
-
-        localStorage.removeItem("logout_id");
-        window.location.href = "attendance.html";
-    });
-}
-

@@ -80,9 +80,6 @@
             <input type="date" id="attendanceDate" />
           </div>
           <h3 id="totalAttendance">Total Attendance: 0</h3>
-          <div>
-            <button class="btn-green">+ Log Attendance</button>
-          </div>
         </section>
 
         <div class="search-box">
@@ -92,16 +89,17 @@
         <table>
           <thead>
             <tr>
-              <th>EMPLOYEE ID</th>
-              <th>EMPLOYEE NAME</th>
-              <th>DEPARTMENT</th>
-              <th>POSITION</th>
-              <th>DATE</th>
-              <th>TIME IN</th>
-              <th>TIME OUT</th>
-              <th>ACTIONS</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Position</th>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Total Hours</th>
             </tr>
-          </thead>
+        </thead>
+
           <tbody id="attendanceTable"></tbody>
         </table>
       </main>
@@ -109,7 +107,7 @@
 
     <script>
       const userEmail = localStorage.getItem('userEmail');
-      document.getElementById('welcomeText').textContent = "Welcome, " + userEmail;
+      document.getElementById('welcomeText').textContent = "Welcome, " + (userEmail || "Guest");
     </script>
 
     <!-- Animated Sidebar Script -->
