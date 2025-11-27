@@ -41,8 +41,7 @@
 
         <div class="form-group">
           <label for="employeeId">Employee ID</label>
-          <input type="text" id="employeeId"
-            placeholder="Enter your Employee ID (Ask HR if unsure)" required>
+          <input type="text" id="employeeId" placeholder="Enter your Employee ID (Ask HR if unsure)" required>
         </div>
 
         <div class="form-group">
@@ -50,23 +49,35 @@
           <input type="email" id="email" placeholder="Enter your email" required>
         </div>
 
+        <!-- NEW ROLE DROPDOWN -->
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select id="role" placeholder="Select Role" required >
+            <option value="" disabled selected>Select Role</option>
+            <option value="HR">HR</option>
+            <option value="Employee">Employee</option>
+            <option value="Manager">Manager</option>
+          </select>
+        </div>
+
         <!-- Password Field -->
         <div class="form-group password-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" required placeholder="At least 6 Characters">
-            <img src="../images/hide.png" class="toggle-password" data-target="password">
+          <label for="password">Password</label>
+          <input type="password" id="password" required placeholder="At least 6 Characters">
+          <img src="../images/hide.png" class="toggle-password" data-target="password">
         </div>
 
         <div class="form-group password-group">
-            <label for="confirmPassword">Confirm Password</label>
-            <input type="password" id="confirmPassword" required placeholder="Confirm Password">
-            <img src="../images/hide.png" class="toggle-password" data-target="confirmPassword">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" required placeholder="Confirm Password">
+          <img src="../images/hide.png" class="toggle-password" data-target="confirmPassword">
         </div>
 
         <button type="submit" class="btn-primary">Create Account</button>
-        
+
         <p style="text-align: center; margin-top: 15px;">
-          Already have an account? <a href="index.html" style="color: #8e44ad; text-decoration: none;">Login here</a>
+          Already have an account? 
+          <a href="index.html" style="color: #8e44ad; text-decoration: none;">Login here</a>
         </p>
       </form>
     </div>

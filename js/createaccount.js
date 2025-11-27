@@ -14,6 +14,7 @@ const firstNameInput = document.getElementById('firstName');
 const lastNameInput = document.getElementById('lastName');
 const employeeIdInput = document.getElementById('employeeId');
 const emailInput = document.getElementById('email');
+const roleSelect = document.getElementById('role');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
 const successMessage = document.getElementById('successMessage');
@@ -47,11 +48,12 @@ form.addEventListener('submit', (e) => {
   const lastName = lastNameInput.value.trim();
   const employeeId = employeeIdInput.value.trim();
   const email = emailInput.value.trim();
+  const role = roleSelect.value;   // NEW
   const password = passwordInput.value;
   const confirmPassword = confirmPasswordInput.value;
 
   // Validation
-  if (!firstName || !lastName || !employeeId || !email || !password || !confirmPassword) {
+  if (!firstName || !lastName || !employeeId || !email || !password || !confirmPassword || !role) {
     return showError("Please fill out all fields.");
   }
 
@@ -82,8 +84,8 @@ form.addEventListener('submit', (e) => {
     lastName,
     employeeId,
     email,
-    password, // In production, hash this!
-    role: "Employee", // Default role
+    password,
+    role, // <-- SAVES THE SELECTED ROLE
     createdAt: new Date().toISOString()
   };
 
@@ -122,7 +124,7 @@ function showModal() {
 }
 
 // Hide error on input
-document.querySelectorAll("input").forEach(input => {
+document.querySelectorAll("input, select").forEach(input => {
   input.addEventListener("input", () => {
     errorMessage.style.display = "none";
   });

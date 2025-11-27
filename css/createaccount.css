@@ -89,6 +89,21 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+select {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  transition: 0.2s ease;
+}
+
+select:focus {
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+
 /* Password Toggle Icon */
 .password-group {
     position: relative;
