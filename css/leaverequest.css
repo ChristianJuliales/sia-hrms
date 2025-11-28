@@ -1,0 +1,13 @@
+/* Use the same base as leave.css but saved as leaverequest.css */
+/* For brevity, include the same contents as ../css/leave.css plus any manager-specific tweaks.
+   You can simply copy paste the leave.css content into leaverequest.css for design consistency.
+   Below are manager-specific overrides (kept minimal). */
+
+@import url('../css/leave.css');
+
+/* Manager page specific tweaks */
+.main .leave-header > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

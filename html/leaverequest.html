@@ -15,7 +15,7 @@
         const loggedInUser = JSON.parse(loggedInUserString);
         const userRole = loggedInUser.role;
 
-        // Redirect non-HR users away from HR-only pages
+        // If not HR/Manager, redirect away
         if (userRole === "Employee" && hrOnlyPages.includes(currentPage)) {
             window.location.href = "attendance.html";
         }
@@ -24,8 +24,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leave Balances - RMT HRMS</title>
-  <link rel="stylesheet" href="../css/leave.css" />
+  <title>Leave Requests - RMT HRMS</title>
+  <link rel="stylesheet" href="../css/leaverequest.css" />
 </head>
 <body>
   <div class="container">
@@ -73,92 +73,31 @@
     <main class="main">
       <header class="leave-header">
         <div>
-          <h1>Leave Balances</h1>
-          <p>View employee leave balances and submit leave requests</p>
+          <h1>Incoming Leave Requests</h1>
+          <p>Approve or reject leave applications</p>
         </div>
-        <!-- Removed header + New Leave Request button per request -->
+        <div>
+          <label for="dateFilter" style="font-weight:600; color:#374151; margin-right:8px;">Filter:</label>
+          <select id="dateFilter" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db;">
+            <option value="this_week">This Week</option>
+            <option value="this_month">This Month</option>
+            <option value="all" selected>All</option>
+          </select>
+        </div>
       </header>
 
-      <div class="tabs">
-        <button class="tab active" data-tab="balances">Leave Balances</button>
-        <button class="tab" data-tab="pending">Pending</button>
-        <button class="tab" data-tab="approved">Approved</button>
-        <button class="tab" data-tab="rejected">Rejected</button>
-      </div>
-
       <section class="leave-list" id="leaveList">
-        <p class="no-leave">No leave requests or balances found</p>
+        <p class="no-leave">No pending leave requests</p>
       </section>
     </main>
   </div>
 
-  <!-- Leave Request Modal -->
-  <div id="leaveModal" class="modal">
-    <div class="modal-content">
-      <span class="close-btn" id="closeModal">&times;</span>
-      <h3>New Leave Request</h3>
-
-      <form id="leaveForm">
-        <label for="employeeId">Employee ID</label>
-        <input type="text" id="employeeId" placeholder="Enter employee ID" required>
-
-        <label for="employeeName">Employee Name</label>
-        <input type="text" id="employeeName" placeholder="Enter employee name" required>
-
-        <label for="department">Department</label>
-        <input type="text" id="department" placeholder="Enter department" required>
-
-        <label for="position">Position</label>
-        <input type="text" id="position" placeholder="Enter position" required>
-
-        <label>Remaining Leave Balance</label>
-        <p id="remainingBalance" class="static-balance" style="
-            padding: 8px;
-            background: #f3f4f6;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            font-weight: 600;
-        "></p>
-
-
-        <label for="leaveType">Leave Type</label>
-        <select id="leaveType" required>
-          <option value="Vacation">Vacation</option>
-          <option value="Sick">Sick</option>
-          <option value="Bereavement">Bereavement</option>
-          <option value="Maternity/Paternity">Maternity/Paternity</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <div class="date-row">
-          <div>
-            <label for="startDate">Start Date</label>
-            <input type="date" id="startDate" required>
-          </div>
-          <div>
-            <label for="endDate">End Date</label>
-            <input type="date" id="endDate" required>
-          </div>
-        </div>
-
-        <label for="reason">Reason</label>
-        <textarea id="reason" rows="3" placeholder="Enter reason"></textarea>
-
-        <div class="modal-actions">
-          <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-submit">Submit Request</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script>
-    // Welcome text and unified logout handling
     const userEmail = localStorage.getItem('userEmail') || "";
     document.getElementById('welcomeText').textContent = "Welcome, " + userEmail;
   </script>
 
-  <!-- Animated Sidebar Script -->
+  <!-- Sidebar script copy (keeps consistent) -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const sidebar = document.querySelector(".sidebar");
@@ -237,6 +176,6 @@
     });
   </script>
 
-  <script src="../js/leave.js"></script>
+  <script src="../js/leaverequest.js"></script>
 </body>
 </html>
