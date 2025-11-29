@@ -16,7 +16,7 @@
 }
 
 .sidebar.expanded {
-  width: 280px;
+  width: 300px;
   padding: 20px;
   overflow-y: auto;
 }
@@ -464,6 +464,51 @@ body {
   color: #9ca3af;
 }
 
+/* Table styles for Leave Balances and Manager tables */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.leaves-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.leaves-table th,
+.leaves-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.leaves-table th {
+  background: #f8fafc;
+  color: #2d6e4e;
+  font-weight: 700;
+}
+
+.leaves-table tbody tr:hover {
+  background: #fcfff7;
+}
+
+.action-btn {
+  background: #2d6e4e;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.action-btn:hover {
+  background: #1f4a34;
+}
+
 .leave-card {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -532,7 +577,7 @@ body {
   background-color: #fff;
   padding: 25px 30px;
   border: 1px solid #e5e7eb;
-  width: 400px;
+  width: 480px;
   border-radius: 12px;
   position: relative;
   box-shadow: 0 3px 10px rgba(0,0,0,0.15);
@@ -572,7 +617,8 @@ body {
 }
 
 .modal-content input,
-.modal-content textarea {
+.modal-content textarea,
+.modal-content select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #d1d5db;
