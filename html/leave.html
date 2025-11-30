@@ -1,26 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-  <script>
-    const hrOnlyPages = [
-        "dashboard.html", "employee.html", "employee_add.html",
-        "employee_edit.html", "employee_view.html", "payroll.html", "reports.html", "leaverequest.html"
-    ];
+<script>
+    // ===================================================
+    // ACCESS CONTROL: Redirect employees away from HR pages
+    // ===================================================
+    // Pages strictly for HR/Manager roles only. 
+    // NOTE: leave.html and attendance.html are intentionally EXCLUDED.
+    const hrOnlyPages = [
+        "dashboard.html", 
+        "employee.html", 
+        "employee_add.html",
+        "employee_edit.html", 
+        "employee_view.html", 
+        "payroll.html", 
+        "reports.html", 
+        "leaverequest.html" // Separate request approval page
+    ];
 
-    const currentPage = window.location.pathname.split("/").pop();
-    const loggedInUserString = localStorage.getItem('loggedInUser');
+    const currentPage = window.location.pathname.split("/").pop();
+    const loggedInUserString = localStorage.getItem('loggedInUser');
 
-    if (!loggedInUserString) {
-        window.location.href = "index.html";
-    } else {
-        const loggedInUser = JSON.parse(loggedInUserString);
-        const userRole = loggedInUser.role;
+    if (!loggedInUserString) {
+        window.location.href = "index.html";
+    } else {
+        const loggedInUser = JSON.parse(loggedInUserString);
+        const userRole = loggedInUser.role;
 
-        // Redirect non-HR users away from HR-only pages
-        if (userRole === "Employee" && hrOnlyPages.includes(currentPage)) {
-            window.location.href = "attendance.html";
-        }
-    }
-  </script>
+        // 1. If employee tries to access a restricted HR page, redirect to leave.html
+        if (userRole === "Employee" && hrOnlyPages.includes(currentPage)) {
+            window.location.href = "leave.html"; 
+        }
+        
+        // 2. If employee is NOT on leave.html or attendance.html, redirect them to leave.html
+        if (userRole === "Employee" && currentPage !== "leave.html" && currentPage !== "attendance.html") {
+            window.location.href = "leave.html"; 
+        }
+    }
+</script>
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -152,91 +169,136 @@
     </div>
   </div>
 
-  <script>
-    // Welcome text and unified logout handling
-    const userEmail = localStorage.getItem('userEmail') || "";
-    document.getElementById('welcomeText').textContent = "Welcome, " + userEmail;
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+<script src="../js/supabase-config.js"></script> 
+<script src="../js/leave.js"></script>
 
-  <!-- Animated Sidebar Script -->
-  <script>
+<script>
     document.addEventListener("DOMContentLoaded", () => {
-      const sidebar = document.querySelector(".sidebar");
+        const sidebar = document.querySelector(".sidebar");
+        const welcomeText = document.getElementById('welcomeText');
+        
+        // --- User Data Initialization ---
+        const loggedInUserString = localStorage.getItem('loggedInUser');
+        let loggedInUser = null; 
+        let userRole = 'HR';
+        let userName = 'Guest';
 
-      if (!document.querySelector(".hamburger-btn")) {
-        const hamburger = document.createElement("button");
-        hamburger.className = "hamburger-btn";
-        hamburger.innerHTML = '<span></span><span></span><span></span>';
-        sidebar.appendChild(hamburger);
-      }
-
-      const hamburger = document.querySelector(".hamburger-btn");
-      let isExpanded = false;
-      let hoverTimeout;
-
-      hamburger.addEventListener("click", (e) => {
-        e.stopPropagation();
-        isExpanded = !isExpanded;
-        sidebar.classList.toggle("expanded", isExpanded);
-      });
-
-      sidebar.addEventListener("mouseenter", () => {
-        clearTimeout(hoverTimeout);
-        sidebar.classList.add("expanded");
-      });
-
-      sidebar.addEventListener("mouseleave", () => {
-        if (!isExpanded) {
-          hoverTimeout = setTimeout(() => {
-            sidebar.classList.remove("expanded");
-          }, 300);
+        if (loggedInUserString) {
+            loggedInUser = JSON.parse(loggedInUserString);
+            userRole = loggedInUser.role;
+            
+            if (loggedInUser.first_name && loggedInUser.last_name) {
+                userName = `${loggedInUser.first_name} ${loggedInUser.last_name}`;
+            } else if (loggedInUser.employee_id) {
+                userName = loggedInUser.employee_id;
+            } else {
+                userName = loggedInUser.email || 'User';
+            }
         }
-      });
 
-      const navItems = document.querySelectorAll(".nav-item");
-      navItems.forEach(item => {
-        const text = item.textContent.trim();
-        const icon = text.split(" ")[0];
-        const label = text.substring(icon.length).trim();
-        item.innerHTML = `<span class="nav-item-icon">${icon}</span><span class="nav-item-text">${label}</span>`;
-      });
-
-      const currentPage = window.location.pathname.split("/").pop();
-      navItems.forEach(item => {
-        if (item.getAttribute("href") === currentPage) {
-          item.classList.add("active");
+        // 1. Set Welcome Text
+        if (welcomeText) {
+            welcomeText.textContent = `Welcome, ${userName}.`;
         }
-      });
 
-      const userIcon = document.getElementById("userIcon");
-      const dropdownMenu = document.getElementById("dropdownMenu");
-      const logoutBtn = document.getElementById("logoutBtn");
+        // 2. Sidebar Hiding Logic (for Employee role)
+        if (userRole === "Employee") {
+            const navLinksToHide = [
+                'navDashboard', 'navEmployees', 'navLeaveRequest', 
+                'navPayroll', 'navReports'
+            ];
 
-      userIcon?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        dropdownMenu.classList.toggle("show");
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".user-menu-sidebar")) {
-          dropdownMenu.classList.remove("show");
+            navLinksToHide.forEach(id => {
+                const link = document.getElementById(id);
+                if (link) {
+                    link.style.display = 'none';
+                }
+            });
         }
-      });
+        
+        // 3. --- Sidebar Animation Logic (Restored) ---
+        // Ensure the hamburger button exists in the DOM if needed for the animation
+        if (!document.querySelector(".hamburger-btn")) {
+             const hamburger = document.createElement("button");
+             hamburger.className = "hamburger-btn";
+             hamburger.innerHTML = '<span></span><span></span><span></span>';
+             sidebar.appendChild(hamburger);
+        }
 
-      logoutBtn?.addEventListener("click", () => {
-        localStorage.removeItem("loggedInUser");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("isLoggedIn");
-        window.location.href = "index.html";
-      });
+        const hamburger = document.querySelector(".hamburger-btn");
+        let isExpanded = false;
+        let hoverTimeout;
 
-      const userEmailDisplay = document.getElementById("userEmailDisplay");
-      if (userEmailDisplay && userEmail) {
-        userEmailDisplay.textContent = userEmail;
-      }
+        // Toggle button click
+        hamburger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            isExpanded = !isExpanded;
+            sidebar.classList.toggle("expanded", isExpanded);
+        });
+
+        // Mouse enter (hover expansion)
+        sidebar.addEventListener("mouseenter", () => {
+            clearTimeout(hoverTimeout);
+            sidebar.classList.add("expanded");
+        });
+
+        // Mouse leave (hover collapse)
+        sidebar.addEventListener("mouseleave", () => {
+            if (!isExpanded) {
+                hoverTimeout = setTimeout(() => {
+                    sidebar.classList.remove("expanded");
+                }, 300);
+            }
+        });
+        
+        // 4. Set Active Link and Format Nav Items
+        const navItems = document.querySelectorAll(".nav-item");
+        const currentPage = window.location.pathname.split("/").pop();
+        
+        navItems.forEach(item => {
+            // Set active class
+            if (item.getAttribute("href") === currentPage) {
+                item.classList.add("active");
+            }
+            
+            // Re-apply icon/text separation for styling consistency
+            const text = item.textContent.trim();
+            const icon = text.split(" ")[0];
+            const label = text.substring(icon.length).trim();
+            item.innerHTML = `<span class="nav-item-icon">${icon}</span><span class="nav-item-text">${label}</span>`;
+        });
+
+
+        // 5. --- User Dropdown Menu Logic (Restored) ---
+        const userIcon = document.getElementById("userIcon");
+        const dropdownMenu = document.getElementById("dropdownMenu");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const userEmailDisplay = document.getElementById("userEmailDisplay");
+
+        if (userEmailDisplay && loggedInUser) {
+            userEmailDisplay.textContent = loggedInUser.email || 'N/A';
+        }
+
+        // Toggle dropdown visibility
+        userIcon?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle("show");
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".user-menu-sidebar")) {
+                dropdownMenu.classList.remove("show");
+            }
+        });
+
+        // Logout functionality
+        logoutBtn?.addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "index.html";
+        });
     });
-  </script>
-
-  <script src="../js/leave.js"></script>
+</script>
 </body>
 </html>

@@ -4,7 +4,8 @@
     // --- Define Constants and Current Page ---
     const hrOnlyPages = [
         "dashboard.html", "employee.html", "employee_add.html", 
-        "employee_edit.html", "employee_view.html", "payroll.html", "reports.html"
+        "employee_edit.html", "employee_view.html", "payroll.html", "reports.html",
+        "leaverequest.html"
     ];
 
     const currentPage = window.location.pathname.split("/").pop();
@@ -58,6 +59,7 @@
                 <a href="employee.html" class="nav-item" id="navEmployees">👥 Employees</a>
                 <a href="attendance.html" class="nav-item" id="navAttendance">🕒 Attendance</a>
                 <a href="leave.html" class="nav-item" id="navLeave">📄 Leave Management</a>
+                <a href="leaverequest.html" class="nav-item" id="navLeaveRequest">📄 Leave Request</a>
                 <a href="payroll.html" class="nav-item" id="navPayroll">💲 Payroll</a>
                 <a href="reports.html" class="nav-item" id="navReports">📊 Reports</a>
             </nav>
