@@ -1,3 +1,9 @@
+// ===================================================
+// CREATE ACCOUNT - SUPABASE READY
+// ===================================================
+
+const supabase = window.supabaseClient;
+
 // DOM Elements
 const form = document.getElementById('createAccountForm');
 const firstNameInput = document.getElementById('firstName');
@@ -27,7 +33,7 @@ document.querySelectorAll('.toggle-password').forEach(icon => {
   });
 });
 
-// Form Submission - Ready for Supabase
+// Form Submission
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -55,52 +61,57 @@ form.addEventListener('submit', async (e) => {
     return showError("Passwords do not match.");
   }
 
-  // TODO: Replace with Supabase user creation
-  // Example:
-  // try {
-  //   // 1. Create auth user
-  //   const { data: authData, error: authError } = await supabase.auth.signUp({
-  //     email: email,
-  //     password: password,
-  //   });
-  //
-  //   if (authError) throw authError;
-  //
-  //   // 2. Get role_id from roles table
-  //   const { data: roleData } = await supabase
-  //     .from('roles')
-  //     .select('id')
-  //     .eq('role_name', role)
-  //     .single();
-  //
-  //   // 3. Insert into employees table
-  //   const { error: employeeError } = await supabase
-  //     .from('employees')
-  //     .insert({
-  //       id: authData.user.id,
-  //       employee_id: employeeId,
-  //       first_name: firstName,
-  //       last_name: lastName,
-  //       email: email,
-  //       created_at: new Date().toISOString()
-  //     });
-  //
-  //   if (employeeError) throw employeeError;
-  //
-  //   // 4. Assign role in positions table
-  //   await supabase
-  //     .from('positions')
-  //     .insert({
-  //       employee_id: authData.user.id,
-  //       role_id: roleData.id
-  //     });
-  //
-  //   showModal();
-  // } catch (error) {
-  //   showError(error.message);
-  // }
+  try {
+    // 1. Create auth user in Supabase
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      }, {
+     emailRedirectTo: window.location.origin + '/index.html', // Use your desired login/redirect page
+      });
+    
 
-  showError("⚠️ Please connect to Supabase first");
+    if (authError) throw authError;
+
+    // 2. Get position_id from positions table based on role_name
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('role_name', role)
+      .single();
+
+    if (roleError) throw roleError;
+
+    // 3. Find or get the position_id that matches this role
+    // (Assuming you have positions already created with role_id)
+    const { data: positionData, error: positionError } = await supabase
+      .from('positions')
+      .select('id')
+      .eq('role_id', roleData.id)
+      .limit(1)
+      .single();
+
+    if (positionError) throw positionError;
+
+    // 4. Insert into employees table
+    const { error: employeeError } = await supabase
+      .from('employees')
+      .insert({
+        user_id: authData.user.id,
+        employee_id: employeeId,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        position_id: positionData.id
+      });
+
+    if (employeeError) throw employeeError;
+
+    showModal();
+  } catch (error) {
+    console.error('Error creating account:', error);
+    showError(error.message);
+  }
 });
 
 // Error display

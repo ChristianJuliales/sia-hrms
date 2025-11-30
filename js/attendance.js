@@ -1,60 +1,9 @@
 /* ===============================
-   GLOBAL STORAGE KEYS
+   ATTENDANCE PAGE - SUPABASE READY
 ================================ */
-const ATT_KEY = "attendance_records";
 
-function getRecords() {
-    try {
-        return JSON.parse(localStorage.getItem(ATT_KEY)) || [];
-    } catch (e) {
-        console.error("Failed to parse attendance records:", e);
-        return [];
-    }
-}
-
-function saveRecords(data) {
-    localStorage.setItem(ATT_KEY, JSON.stringify(data));
-}
-
-/* ===============================
-   HELPERS
-================================ */
-// Parse "08:30:00 AM" → seconds
-function parseTimeToSeconds(t) {
-    if (!t || t === "--") return null;
-    const m = t.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
-    if (!m) return null;
-
-    let hh = parseInt(m[1], 10);
-    const mm = parseInt(m[2], 10);
-    const ss = parseInt(m[3], 10);
-    const ampm = m[4].toUpperCase();
-
-    if (ampm === "AM") {
-        if (hh === 12) hh = 0;
-    } else {
-        if (hh !== 12) hh += 12;
-    }
-
-    return hh * 3600 + mm * 60 + ss;
-}
-
-function computeHours(timeIn, timeOut) {
-    if (!timeIn || !timeOut || timeOut === "--") return "--";
-    const s1 = parseTimeToSeconds(timeIn);
-    const s2 = parseTimeToSeconds(timeOut);
-    if (s1 === null || s2 === null) return "--";
-
-    let diffSec = s2 - s1;
-    if (diffSec < 0) diffSec += 24 * 3600;
-
-    return (diffSec / 3600).toFixed(2);
-}
-
-/* ===============================
-   PAGE: attendance.html
-================================ */
 if (window.location.pathname.includes("attendance.html")) {
+    const supabase = window.supabaseClient;
 
     const dateInput = document.getElementById("attendanceDate");
     const searchInput = document.getElementById("search");
@@ -74,47 +23,99 @@ if (window.location.pathname.includes("attendance.html")) {
     const userRole = loggedInUser.role || 'Employee';
     const userId = loggedInUser.id || '';
 
-    // TODO: Remove sample data creation - Fetch from Supabase instead
-    // Example:
-    // async function loadAttendanceFromSupabase() {
-    //     const { data, error } = await supabase
-    //         .from('attendance')
-    //         .select(`
-    //             *,
-    //             employees(employee_id, first_name, last_name, positions(position_name, departments(department_name)))
-    //         `)
-    //         .order('timestamp', { ascending: false });
-    //
-    //     if (error) {
-    //         console.error('Error loading attendance:', error);
-    //         return;
-    //     }
-    //
-    //     // Transform Supabase data to match current structure
-    //     const records = data.map(record => ({
-    //         id: record.employee_id,
-    //         name: `${record.employees.first_name} ${record.employees.last_name}`,
-    //         department: record.employees.positions.departments.department_name,
-    //         position: record.employees.positions.position_name,
-    //         date: new Date(record.timestamp).toISOString().split('T')[0],
-    //         timeIn: formatTime(record.time_in),
-    //         timeOut: record.time_out ? formatTime(record.time_out) : '--'
-    //     }));
-    //
-    //     saveRecords(records);
-    // }
+    /* ---------------------------
+       FETCH FROM SUPABASE
+    --------------------------- */
+    async function fetchAttendanceRecords() {
+        try {
+            const { data, error } = await supabase
+                .from('attendance_records')
+                .select(`
+                    *,
+                    employees!inner(
+                        employee_id,
+                        first_name,
+                        last_name,
+                        positions(
+                            position_name,
+                            departments(department_name)
+                        )
+                    )
+                `)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            // Transform to match current structure
+            return (data || []).map(record => ({
+                id: record.employee_id,
+                name: `${record.employees.first_name} ${record.employees.last_name}`,
+                department: record.employees.positions?.departments?.department_name || '-',
+                position: record.employees.positions?.position_name || '-',
+                date: record.date,
+                timeIn: formatTime(record.time_in),
+                timeOut: record.time_out ? formatTime(record.time_out) : '--'
+            }));
+        } catch (error) {
+            console.error('Error fetching attendance:', error);
+            return [];
+        }
+    }
+
+    function formatTime(isoString) {
+        if (!isoString) return '--';
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    }
+
+    /* ---------------------------
+       HELPERS
+    --------------------------- */
+    function parseTimeToSeconds(t) {
+        if (!t || t === "--") return null;
+        const m = t.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+        if (!m) return null;
+
+        let hh = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        const ss = parseInt(m[3], 10);
+        const ampm = m[4].toUpperCase();
+
+        if (ampm === "AM") {
+            if (hh === 12) hh = 0;
+        } else {
+            if (hh !== 12) hh += 12;
+        }
+
+        return hh * 3600 + mm * 60 + ss;
+    }
+
+    function computeHours(timeIn, timeOut) {
+        if (!timeIn || !timeOut || timeOut === "--") return "--";
+        const s1 = parseTimeToSeconds(timeIn);
+        const s2 = parseTimeToSeconds(timeOut);
+        if (s1 === null || s2 === null) return "--";
+
+        let diffSec = s2 - s1;
+        if (diffSec < 0) diffSec += 24 * 3600;
+
+        return (diffSec / 3600).toFixed(2);
+    }
 
     /* ---------------------------
        ROLE-BASED UI ADJUSTMENTS
     --------------------------- */
     function adjustUIForRole() {
         if (userRole === "Employee") {
-            // Hide search box for employees (they only see their own data)
             if (searchInput) {
                 searchInput.parentElement.style.display = "none";
             }
             
-            // Change the header text
             const header = document.querySelector("header h1");
             if (header) {
                 header.textContent = "My Attendance";
@@ -130,13 +131,13 @@ if (window.location.pathname.includes("attendance.html")) {
     /* ---------------------------
        MAIN TABLE LOADING
     --------------------------- */
-    function loadTable() {
+    async function loadTable() {
         const selectedDate = dateInput.value;
         const searchValue = searchInput.value.toLowerCase();
 
-        let all = getRecords();
+        let all = await fetchAttendanceRecords();
 
-        // 🔥 FILTER BY ROLE: Employees only see their own records
+        // Filter by role: Employees only see their own records
         if (userRole === "Employee") {
             all = all.filter(r => r.id === userId);
         }
@@ -273,29 +274,24 @@ if (window.location.pathname.includes("attendance.html")) {
     /* ---------------------------
        LOGOUT BUTTON
     --------------------------- */
-    window.goLogout = function(empId) {
-        const all = getRecords();
-        const record = all.find(r => r.id === empId && r.timeOut === "--");
-
-        if (record) {
-            const now = new Date();
-            record.timeOut = now.toLocaleTimeString(
-                'en-US',
-                { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }
-            );
-
-            saveRecords(all);
+    window.goLogout = async function(empId) {
+        try {
+            const today = new Date().toISOString().split("T")[0];
             
-            // TODO: Update Supabase
-            // await supabase
-            //     .from('attendance')
-            //     .update({ time_out: new Date().toISOString() })
-            //     .eq('employee_id', empId)
-            //     .eq('time_out', null)
-            //     .eq('date', record.date);
-            
-            loadTable();
+            const { error } = await supabase
+                .from('attendance_records')
+                .update({ time_out: new Date().toISOString() })
+                .eq('employee_id', empId)
+                .eq('date', today)
+                .is('time_out', null);
+
+            if (error) throw error;
+
+            await loadTable();
             alert("Successfully logged out!");
+        } catch (error) {
+            console.error('Error logging out:', error);
+            alert('Error logging out: ' + error.message);
         }
     };
 
@@ -318,10 +314,23 @@ if (window.location.pathname.includes("attendance.html")) {
     dateInput.addEventListener("change", () => { currentPage = 1; loadTable(); });
     searchInput.addEventListener("input", () => { currentPage = 1; loadTable(); });
 
+    /* ---------------------------
+       REALTIME SUBSCRIPTION
+    --------------------------- */
+    supabase
+        .channel('attendance-changes')
+        .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'attendance_records' 
+        }, () => {
+            loadTable();
+        })
+        .subscribe();
+
     // Apply role-based UI changes
     adjustUIForRole();
     
     // Initial load
-    // TODO: Call loadAttendanceFromSupabase() here
     loadTable();
 }

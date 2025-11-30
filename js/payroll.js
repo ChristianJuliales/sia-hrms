@@ -1,5 +1,5 @@
 // ===================================================
-// AUTOMATED PAYROLL DASHBOARD
+// AUTOMATED PAYROLL DASHBOARD WITH SUPABASE
 // ===================================================
 
 const PayrollCalculator = {
@@ -133,6 +133,7 @@ const PayrollCalculator = {
 // MAIN APPLICATION
 // ===================================================
 document.addEventListener("DOMContentLoaded", () => {
+  const supabase = window.supabaseClient;
   const periodSelect = document.getElementById("periodSelect");
   const tableBody = document.querySelector(".payroll-table tbody");
   const detailsModal = document.getElementById("detailsModal");
@@ -150,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedPeriod = getCurrentPeriod();
 
   // ===================================================
-  // GET CURRENT PERIOD (Current Month)
+  // GET CURRENT PERIOD
   // ===================================================
   function getCurrentPeriod() {
     const now = new Date();
@@ -164,63 +165,102 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===================================================
-  // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
+  // FETCH DATA FROM SUPABASE
   // ===================================================
   async function fetchAllEmployees() {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase.from('employees').select('*');
-    return [];
+    try {
+      const { data, error } = await supabase.from('employees').select('*');
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      return [];
+    }
   }
 
   async function fetchAttendanceRecords(employeeId, periodStart, periodEnd) {
-    // TODO: Implement Supabase fetch with filters
-    // const { data, error } = await supabase
-    //   .from('attendance_records')
-    //   .select('*')
-    //   .eq('id', employeeId)
-    //   .gte('date', periodStart)
-    //   .lte('date', periodEnd)
-    //   .neq('timeOut', null);
-    return [];
+    try {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('id', employeeId)
+        .gte('date', periodStart)
+        .lte('date', periodEnd);
+      
+      if (error) throw error;
+      
+      // Filter out records with no timeOut
+      return (data || []).filter(r => r.timeOut && r.timeOut !== "--" && r.timeOut !== null);
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      return [];
+    }
   }
 
   async function fetchProcessedPayroll(employeeId, period) {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase
-    //   .from('payroll_records')
-    //   .select('*')
-    //   .eq('employeeNo', employeeId)
-    //   .eq('period', period)
-    //   .single();
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('payroll_records')
+        .select('*')
+        .eq('employeeNo', employeeId)
+        .eq('period', period)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error; // Ignore "not found" error
+      return data || null;
+    } catch (error) {
+      console.error('Error fetching payroll:', error);
+      return null;
+    }
   }
 
   async function fetchAllPayrollRecords() {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase.from('payroll_records').select('*');
-    payrollRecords = [];
-    return payrollRecords;
+    try {
+      const { data, error } = await supabase.from('payroll_records').select('*');
+      if (error) throw error;
+      payrollRecords = data || [];
+      return payrollRecords;
+    } catch (error) {
+      console.error('Error fetching payroll records:', error);
+      payrollRecords = [];
+      return [];
+    }
   }
 
   async function savePayrollRecord(record) {
-    // TODO: Implement Supabase insert
-    // const { data, error } = await supabase
-    //   .from('payroll_records')
-    //   .insert([record]);
-    
-    // For now, just add to local array
-    payrollRecords.push(record);
+    try {
+      const { data, error } = await supabase
+        .from('payroll_records')
+        .insert([record])
+        .select();
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        payrollRecords.push(data[0]);
+      }
+      return data;
+    } catch (error) {
+      console.error('Error saving payroll:', error);
+      alert('❌ Error saving payroll: ' + error.message);
+      return null;
+    }
   }
 
   async function deletePayrollRecord(id) {
-    // TODO: Implement Supabase delete
-    // const { error } = await supabase
-    //   .from('payroll_records')
-    //   .delete()
-    //   .eq('id', id);
-    
-    // For now, just filter local array
-    payrollRecords = payrollRecords.filter(p => p.id !== id);
+    try {
+      const { error } = await supabase
+        .from('payroll_records')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      payrollRecords = payrollRecords.filter(p => p.id !== id);
+    } catch (error) {
+      console.error('Error deleting payroll:', error);
+      alert('❌ Error deleting payroll: ' + error.message);
+    }
   }
 
   // ===================================================
@@ -231,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const monthlySalary = parseFloat(employee.basicSalary) || parseFloat(employee.monthlySalary) || 17000;
 
     if (attendanceRecords.length === 0) {
-      return null; // No attendance data
+      return null;
     }
 
     const daysWorked = attendanceRecords.length;
@@ -276,6 +316,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // RENDER TABLE
   // ===================================================
   async function renderEmployeeTable() {
+    tableBody.innerHTML = '<tr><td colspan="9" class="empty">Loading...</td></tr>';
+    
     const employees = await fetchAllEmployees();
     
     if (employees.length === 0) {
@@ -292,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
 
       if (processed) {
-        // Already processed - show View/Delete
         rows.push(`
           <tr>
             <td>${emp.empId}</td>
@@ -312,7 +353,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </tr>
         `);
       } else {
-        // Not processed yet - show Process button
         rows.push(`
           <tr>
             <td>${emp.empId}</td>
@@ -360,7 +400,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Show confirmation
     const confirmMsg = `📊 PAYROLL SUMMARY for ${employee.firstName} ${employee.lastName}\n\n` +
           `Period: ${selectedPeriod.start} to ${selectedPeriod.end}\n` +
           `Days Worked: ${calculation.daysWorked}\n` +
@@ -374,9 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!confirm(confirmMsg)) return;
 
-    // Save payroll record
     const newRecord = {
-      id: Date.now(),
       employeeNo: employee.empId,
       employeeStatus: employee.empStatus || 'Regular',
       employeePosition: employee.position || 'N/A',
@@ -400,9 +437,11 @@ document.addEventListener("DOMContentLoaded", () => {
       processedDate: new Date().toLocaleDateString()
     };
 
-    await savePayrollRecord(newRecord);
-    alert("✅ Payroll processed successfully!");
-    await renderEmployeeTable();
+    const result = await savePayrollRecord(newRecord);
+    if (result) {
+      alert("✅ Payroll processed successfully!");
+      await renderEmployeeTable();
+    }
   };
 
   // ===================================================
@@ -458,11 +497,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================================
   closeDetailsModal?.addEventListener("click", () => detailsModal.style.display = "none");
   closeDetailsBtn?.addEventListener("click", () => detailsModal.style.display = "none");
-
   window.addEventListener("click", (e) => {
     if (e.target === detailsModal) detailsModal.style.display = "none";
   });
-
   printReceiptBtn?.addEventListener("click", () => window.print());
 
   // ===================================================
@@ -495,12 +532,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===================================================
-  // PERIOD FILTER (Optional Enhancement)
+  // PERIOD FILTER
   // ===================================================
   if (periodSelect) {
     periodSelect.addEventListener("change", async (e) => {
       if (e.target.value !== "All Periods") {
-        // You can add period filtering logic here
+        // Add period filtering logic here
       }
       await renderEmployeeTable();
     });
@@ -513,4 +550,15 @@ document.addEventListener("DOMContentLoaded", () => {
     await fetchAllPayrollRecords();
     await renderEmployeeTable();
   })();
+
+  // ===================================================
+  // REALTIME SUBSCRIPTION
+  // ===================================================
+  supabase
+    .channel('payroll-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_records' }, async () => {
+      await fetchAllPayrollRecords();
+      await renderEmployeeTable();
+    })
+    .subscribe();
 });

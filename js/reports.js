@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const supabase = window.supabaseClient;
+
     // ===================================================
     // TAB SWITCHING
     // ===================================================
@@ -15,30 +17,50 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ===================================================
-    // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
+    // FETCH DATA FROM SUPABASE
     // ===================================================
     async function fetchEmployees() {
-        // TODO: Implement Supabase fetch
-        // const { data, error } = await supabase.from('employees').select('*');
-        return [];
+        try {
+            const { data, error } = await supabase.from('employees').select('*');
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+            return [];
+        }
     }
 
     async function fetchAttendanceRecords() {
-        // TODO: Implement Supabase fetch
-        // const { data, error } = await supabase.from('attendance_records').select('*');
-        return [];
+        try {
+            const { data, error } = await supabase.from('attendance_records').select('*');
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching attendance:', error);
+            return [];
+        }
     }
 
     async function fetchLeaveRequests() {
-        // TODO: Implement Supabase fetch
-        // const { data, error } = await supabase.from('leave_requests').select('*');
-        return [];
+        try {
+            const { data, error } = await supabase.from('leave_requests').select('*');
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching leave requests:', error);
+            return [];
+        }
     }
 
     async function fetchPayrollRecords() {
-        // TODO: Implement Supabase fetch
-        // const { data, error } = await supabase.from('payroll_records').select('*');
-        return [];
+        try {
+            const { data, error } = await supabase.from('payroll_records').select('*');
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching payroll:', error);
+            return [];
+        }
     }
 
     // ===================================================
@@ -117,10 +139,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Calculate absences (days with no attendance)
+        // Calculate absences
         const today = new Date();
         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const workingDays = Math.floor(daysInMonth * (22/30)); // Approximate working days
+        const workingDays = Math.floor(daysInMonth * (22/30));
 
         Object.keys(attendanceByEmployee).forEach(empId => {
             const data = attendanceByEmployee[empId];
@@ -154,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return date >= thirtyDaysAgo && a.timeOut && a.timeOut !== "--";
         });
 
-        const totalPossibleAttendance = employees.length * 22; // 22 working days per month
+        const totalPossibleAttendance = employees.length * 22;
         const attendanceRate = totalPossibleAttendance > 0 
             ? Math.round((recentAttendance.length / totalPossibleAttendance) * 100) 
             : 0;
@@ -162,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelector("#attendanceRateCard .number").textContent = attendanceRate + "%";
 
         // Total Payroll
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const currentMonth = new Date().toISOString().slice(0, 7);
         const currentMonthPayroll = payroll.filter(p => p.period.includes(currentMonth));
         
         const totalPayrollAmount = currentMonthPayroll.reduce((sum, p) => sum + (p.grossPay || 0), 0);
@@ -256,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
             roleCount[role] = (roleCount[role] || 0) + 1;
         });
 
-        const roleLabels = Object.keys(roleCount).slice(0, 5); // Top 5 roles
+        const roleLabels = Object.keys(roleCount).slice(0, 5);
         const roleData = Object.values(roleCount).slice(0, 5);
 
         const payrollRoleCtx = document.getElementById('payrollRoleChart')?.getContext('2d');
@@ -400,4 +422,15 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(() => {
         initializeReports();
     }, 30000);
+
+    // ===================================================
+    // REALTIME SUBSCRIPTIONS
+    // ===================================================
+    supabase
+        .channel('reports-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => initializeReports())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, () => initializeReports())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => initializeReports())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_records' }, () => initializeReports())
+        .subscribe();
 });

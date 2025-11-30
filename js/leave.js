@@ -1,103 +1,144 @@
+// ===================================================
+// LEAVE REQUEST - SUPABASE READY
+// ===================================================
+
 document.addEventListener("DOMContentLoaded", () => {
+  const supabase = window.supabaseClient;
 
-  // ===== Utilities & Data Layers =====
-  const STORAGE_KEYS = {
-    LEAVES: 'leaveRequests',
-    BALANCES: 'leaveBalances',
-    EMPLOYEES: 'employees'
-  };
+  /* ========== SUPABASE FUNCTIONS ========== */
+  async function fetchLeaves() {
+    try {
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select(`
+          *,
+          employees(
+            employee_id,
+            first_name,
+            last_name,
+            positions(
+              position_name,
+              departments(department_name)
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  function readLeaves() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
-  }
+      if (error) throw error;
 
-  function writeLeaves(arr) {
-    localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(arr));
-  }
-
-  function readBalances() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.BALANCES) || '{}');
-  }
-
-  function writeBalances(obj) {
-    localStorage.setItem(STORAGE_KEYS.BALANCES, JSON.stringify(obj));
-  }
-
-  function readEmployees() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.EMPLOYEES) || '[]');
-  }
-
-  // TODO: Replace with Supabase functions
-  // async function fetchLeavesFromSupabase() {
-  //   const { data, error } = await supabase
-  //     .from('leave_requests')
-  //     .select(`
-  //       *,
-  //       employees(employee_id, first_name, last_name, positions(position_name, departments(department_name)))
-  //     `)
-  //     .order('created_at', { ascending: false });
-  //
-  //   if (error) {
-  //     console.error('Error fetching leaves:', error);
-  //     return [];
-  //   }
-  //
-  //   return data;
-  // }
-
-  // async function fetchEmployeesFromSupabase() {
-  //   const { data, error } = await supabase
-  //     .from('employees')
-  //     .select(`
-  //       employee_id,
-  //       first_name,
-  //       last_name,
-  //       positions(position_name, departments(department_name))
-  //     `);
-  //
-  //   if (error) {
-  //     console.error('Error fetching employees:', error);
-  //     return [];
-  //   }
-  //
-  //   return data;
-  // }
-
-  function resetBalancesIfNewYear() {
-    const balances = readBalances();
-    const currentYear = new Date().getFullYear();
-    let changed = false;
-
-    for (const empId in balances) {
-      if (!balances[empId].year || balances[empId].year < currentYear) {
-        balances[empId].balance = 12;
-        balances[empId].year = currentYear;
-        changed = true;
-      }
+      return (data || []).map(leave => ({
+        id: leave.id,
+        employeeId: leave.employee_id,
+        employeeName: `${leave.employees.first_name} ${leave.employees.last_name}`,
+        department: leave.employees.positions?.departments?.department_name || '-',
+        position: leave.employees.positions?.position_name || '-',
+        leaveType: leave.leave_type,
+        startDate: leave.start_date,
+        endDate: leave.end_date,
+        reason: leave.reason,
+        status: leave.status,
+        createdAt: leave.created_at
+      }));
+    } catch (error) {
+      console.error('Error fetching leaves:', error);
+      return [];
     }
-    if (changed) writeBalances(balances);
   }
 
-  function ensureBalancesForEmployees() {
-    const employees = readEmployees();
-    const balances = readBalances();
-    const currentYear = new Date().getFullYear();
-    let changed = false;
+  async function fetchEmployees() {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select(`
+          id,
+          employee_id,
+          first_name,
+          last_name,
+          positions(
+            position_name,
+            departments(department_name)
+          )
+        `);
 
-    employees.forEach(emp => {
-      if (!balances[emp.id]) {
-        balances[emp.id] = { balance: 12, year: currentYear };
-        changed = true;
-      } else if (!balances[emp.id].year || balances[emp.id].year < currentYear) {
-        balances[emp.id].balance = 12;
-        balances[emp.id].year = currentYear;
-        changed = true;
+      if (error) throw error;
+
+      return (data || []).map(emp => ({
+        id: emp.id,
+        empId: emp.employee_id,
+        firstName: emp.first_name,
+        lastName: emp.last_name,
+        department: emp.positions?.departments?.department_name || '',
+        position: emp.positions?.position_name || ''
+      }));
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      return [];
+    }
+  }
+
+  async function fetchLeaveBalance(employeeId) {
+    try {
+      const { data, error } = await supabase
+        .from('leave_balances')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      // Return balance or default 12 days
+      return data ? data.balance : 12;
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      return 12;
+    }
+  }
+
+  async function ensureLeaveBalance(employeeId) {
+    try {
+      const { data: existing } = await supabase
+        .from('leave_balances')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .single();
+
+      if (!existing) {
+        await supabase
+          .from('leave_balances')
+          .insert({
+            employee_id: employeeId,
+            balance: 12,
+            year: new Date().getFullYear()
+          });
       }
-    });
-
-    if (changed) writeBalances(balances);
+    } catch (error) {
+      console.error('Error ensuring balance:', error);
+    }
   }
 
+  async function insertLeaveRequest(leaveData) {
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          employee_id: leaveData.employeeId,
+          leave_type: leaveData.leaveType,
+          start_date: leaveData.startDate,
+          end_date: leaveData.endDate,
+          reason: leaveData.reason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error inserting leave:', error);
+      alert('Error submitting leave request: ' + error.message);
+      return false;
+    }
+  }
+
+  /* ========== HELPERS ========== */
   function daysBetweenInclusive(startStr, endStr) {
     const s = new Date(startStr);
     const e = new Date(endStr);
@@ -108,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return diff > 0 ? diff : 0;
   }
 
-  // ===== Elements =====
+  /* ========== DOM ELEMENTS ========== */
   const tabs = document.querySelectorAll('.tab');
   const leaveList = document.getElementById('leaveList');
   const leaveModal = document.getElementById('leaveModal');
@@ -126,22 +167,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const endDateInput = document.getElementById('endDate');
   const reasonInput = document.getElementById('reason');
 
-  // ===== Initialization =====
-  resetBalancesIfNewYear();
-  ensureBalancesForEmployees();
-
-  // ===== Render Functions =====
-  function renderBalancesTable() {
-    const employees = readEmployees();
-    const balances = readBalances();
+  /* ========== RENDER FUNCTIONS ========== */
+  async function renderBalancesTable() {
+    const employees = await fetchEmployees();
 
     if (!employees || employees.length === 0) {
       leaveList.innerHTML = `<p class="no-leave">No employees found. Add employees from the Employee page first.</p>`;
       return;
     }
-
-    // TODO: Use Supabase data
-    // const employees = await fetchEmployeesFromSupabase();
 
     const html = `
       <div class="table-responsive">
@@ -158,12 +191,31 @@ document.addEventListener("DOMContentLoaded", () => {
           </thead>
           <tbody>
           ${
-            employees.map(emp => {
-                const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                const empID = emp.empId || '';
+            await Promise.all(employees.map(async emp => {
+              const fullName = `${emp.firstName} ${emp.lastName}`;
+              const balance = await fetchLeaveBalance(emp.empId);
+              await ensureLeaveBalance(emp.empId);
 
-                return `<tr><td>${empID}</td><td>${fullName}</td><td>${emp.department || '-'}</td><td>${emp.position || '-'}</td><td>${balances[empID] ? balances[empID].balance : 12}</td><td><button class="action-btn btn-open-request" data-id="${empID}" data-name="${fullName}" data-dept="${emp.department || ''}" data-pos="${emp.position || ''}">+ Leave Request</button></td></tr>`;
-            }).join('')
+              return `
+                <tr>
+                  <td>${emp.empId}</td>
+                  <td>${fullName}</td>
+                  <td>${emp.department || '-'}</td>
+                  <td>${emp.position || '-'}</td>
+                  <td>${balance}</td>
+                  <td>
+                    <button 
+                      class="action-btn btn-open-request" 
+                      data-id="${emp.empId}" 
+                      data-name="${fullName}" 
+                      data-dept="${emp.department || ''}" 
+                      data-pos="${emp.position || ''}">
+                      + Leave Request
+                    </button>
+                  </td>
+                </tr>
+              `;
+            })).then(rows => rows.join(''))
           }
           </tbody>
         </table>
@@ -172,20 +224,13 @@ document.addEventListener("DOMContentLoaded", () => {
     leaveList.innerHTML = html;
   }
 
-  function renderLeavesTab(filter='all') {
-    const leaves = readLeaves();
+  async function renderLeavesTab(filter='all') {
+    const leaves = await fetchLeaves();
     let filtered = leaves;
 
     if (filter !== 'all') {
       filtered = leaves.filter(l => l.status === filter);
     }
-
-    // TODO: Use Supabase data
-    // const leaves = await fetchLeavesFromSupabase();
-    // let filtered = leaves;
-    // if (filter !== 'all') {
-    //   filtered = leaves.filter(l => l.status === filter);
-    // }
 
     if (!filtered.length) {
       leaveList.innerHTML = `<p class="no-leave">No ${filter} requests found.</p>`;
@@ -205,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `).join('');
   }
 
-  // ===== Tabs =====
+  /* ========== TABS ========== */
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t=>t.classList.remove('active'));
@@ -217,8 +262,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ===== Modal Open =====
-  document.addEventListener('click', (e) => {
+  /* ========== MODAL OPEN ========== */
+  document.addEventListener('click', async (e) => {
     if (!e.target.classList.contains('btn-open-request')) return;
 
     const id = e.target.dataset.id;
@@ -231,8 +276,8 @@ document.addEventListener("DOMContentLoaded", () => {
     departmentInput.value = dept;
     positionInput.value = pos;
 
-    const balances = readBalances();
-    remainingBalance.textContent = balances[id] ? balances[id].balance : 12;
+    const balance = await fetchLeaveBalance(id);
+    remainingBalance.textContent = balance;
 
     startDateInput.value = '';
     endDateInput.value = '';
@@ -248,12 +293,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === leaveModal) leaveModal.classList.remove('show');
   });
 
-  // ===== Submit Leave Request =====
+  /* ========== SUBMIT LEAVE REQUEST ========== */
   leaveForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const employeeId = employeeIdInput.value.trim();
-    const employeeName = employeeNameInput.value.trim();
     const leaveType = leaveTypeSelect.value;
     const startDate = startDateInput.value;
     const endDate = endDateInput.value;
@@ -269,57 +313,33 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // TODO: Insert to Supabase
-    // const { data, error } = await supabase
-    //   .from('leave_requests')
-    //   .insert({
-    //     employee_id: employeeId,
-    //     leave_type: leaveType,
-    //     start_date: startDate,
-    //     end_date: endDate,
-    //     reason: reason,
-    //     status: 'pending'
-    //   })
-    //   .select()
-    //   .single();
-    //
-    // if (error) {
-    //   alert('Error submitting leave request: ' + error.message);
-    //   return;
-    // }
-
-    const leaves = readLeaves();
-    const newLeave = {
-      id: Date.now(),
+    const success = await insertLeaveRequest({
       employeeId,
-      employeeName,
-      department: departmentInput.value,
-      position: positionInput.value,
       leaveType,
       startDate,
       endDate,
-      reason,
-      status: "pending",
-      createdAt: new Date().toISOString()
-    };
+      reason
+    });
 
-    leaves.push(newLeave);
-    writeLeaves(leaves);
-
-    leaveModal.classList.remove('show');
-
-    document.querySelector('.tab[data-tab="pending"]').click();
-  });
-
-  // ===== Auto-update if employee page changes =====
-  window.addEventListener("storage", (e) => {
-    if (e.key === STORAGE_KEYS.EMPLOYEES) {
-      ensureBalancesForEmployees();
-      renderBalancesTable();
+    if (success) {
+      leaveModal.classList.remove('show');
+      document.querySelector('.tab[data-tab="pending"]').click();
     }
   });
 
-  // ===== Initial Render =====
+  /* ========== REALTIME UPDATES ========== */
+  supabase
+    .channel('leave-request-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
+      const activeTab = document.querySelector('.tab.active');
+      if (activeTab) {
+        const type = activeTab.dataset.tab;
+        if (type === 'balances') renderBalancesTable();
+        else renderLeavesTab(type);
+      }
+    })
+    .subscribe();
+
+  /* ========== INITIAL RENDER ========== */
   renderBalancesTable();
-  // TODO: Call fetchEmployeesFromSupabase() and fetchLeavesFromSupabase()
 });

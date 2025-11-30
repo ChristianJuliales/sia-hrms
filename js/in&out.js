@@ -1,111 +1,63 @@
 // ==================== TIME TRACKER - SUPABASE READY ====================
 
+const supabase = window.supabaseClient;
 let currentEmployee = null;
-const ATT_KEY = "attendance_records";
 
-// ==================== GET EMPLOYEES FROM STORAGE ====================
+// ==================== FETCH EMPLOYEE FROM SUPABASE ====================
 
-function getEmployeesFromStorage() {
+async function getEmployeeById(empId) {
     try {
-        return JSON.parse(localStorage.getItem('employees')) || [];
-    } catch {
-        return [];
+        const { data, error } = await supabase
+            .from('employees')
+            .select(`
+                *,
+                positions(
+                    position_name,
+                    departments(department_name)
+                )
+            `)
+            .eq('employee_id', empId)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            empId: data.employee_id,
+            firstName: data.first_name,
+            lastName: data.last_name,
+            position: data.positions?.position_name || 'N/A',
+            department: data.positions?.departments?.department_name || 'N/A',
+            photo: data.photo_url
+        };
+    } catch (error) {
+        console.error('Error fetching employee:', error);
+        return null;
     }
 }
 
-// TODO: Replace with Supabase fetch
-// async function getEmployeesFromSupabase() {
-//     const { data, error } = await supabase
-//         .from('employees')
-//         .select(`
-//             employee_id,
-//             first_name,
-//             last_name,
-//             photo_url,
-//             positions(
-//                 position_name,
-//                 departments(department_name)
-//             )
-//         `);
-//
-//     if (error) {
-//         console.error('Error fetching employees:', error);
-//         return [];
-//     }
-//
-//     return data;
-// }
+// ==================== ATTENDANCE FUNCTIONS ====================
 
-function getEmployeeById(empId) {
-    const employees = getEmployeesFromStorage();
-    return employees.find(e => 
-        e.empId === empId || 
-        e.empId?.toString() === empId?.toString()
-    );
-}
-
-// TODO: Replace with Supabase fetch by ID
-// async function getEmployeeByIdFromSupabase(empId) {
-//     const { data, error } = await supabase
-//         .from('employees')
-//         .select(`
-//             *,
-//             positions(
-//                 position_name,
-//                 departments(department_name)
-//             )
-//         `)
-//         .eq('employee_id', empId)
-//         .single();
-//
-//     if (error) {
-//         console.error('Error fetching employee:', error);
-//         return null;
-//     }
-//
-//     return data;
-// }
-
-// ==================== STORAGE FUNCTIONS ====================
-
-function getRecords() {
+async function getTodayRecord(empId) {
     try {
-        return JSON.parse(localStorage.getItem(ATT_KEY)) || [];
-    } catch {
-        return [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data, error } = await supabase
+            .from('attendance_records')
+            .select('*')
+            .eq('employee_id', empId)
+            .eq('date', today)
+            .is('time_out', null)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        return data || null;
+    } catch (error) {
+        console.error('Error fetching today record:', error);
+        return null;
     }
 }
-
-function saveRecords(records) {
-    localStorage.setItem(ATT_KEY, JSON.stringify(records));
-}
-
-function getTodayRecord(empId) {
-    if (!empId) return null;
-    const today = new Date().toISOString().split("T")[0];
-    return getRecords().find(r => r.id === empId && r.date === today) || null;
-}
-
-// TODO: Replace with Supabase fetch today's attendance
-// async function getTodayRecordFromSupabase(empId) {
-//     const today = new Date().toISOString().split('T')[0];
-//     
-//     const { data, error } = await supabase
-//         .from('attendance')
-//         .select('*')
-//         .eq('employee_id', empId)
-//         .gte('timestamp', `${today}T00:00:00`)
-//         .lte('timestamp', `${today}T23:59:59`)
-//         .is('time_out', null)
-//         .single();
-//
-//     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-//         console.error('Error fetching today record:', error);
-//         return null;
-//     }
-//
-//     return data;
-// }
 
 // ==================== FORMATTING HELPERS ====================
 
@@ -127,6 +79,12 @@ function formatDate(date = new Date()) {
     });
 }
 
+function formatTimeFromISO(isoString) {
+    if (!isoString) return "--:--:--";
+    const date = new Date(isoString);
+    return formatTime(date);
+}
+
 // ==================== MODAL MANAGEMENT ====================
 
 function showLoginModal() {
@@ -134,22 +92,19 @@ function showLoginModal() {
     document.getElementById('clockModal').classList.remove('show');
 }
 
-function showClockModal(empId) {
-    const employee = getEmployeeById(empId);
+async function showClockModal(empId) {
+    const employee = await getEmployeeById(empId);
     
     if (!employee) {
         showAlert('Employee ID not found', 'error', 'alertBox');
         return;
     }
 
-    // TODO: Use Supabase data
-    // const employee = await getEmployeeByIdFromSupabase(empId);
-
     currentEmployee = employee;
 
     const fullName = `${employee.firstName} ${employee.lastName}`;
-    const position = employee.position || 'N/A';
-    const department = employee.department || 'N/A';
+    const position = employee.position;
+    const department = employee.department;
     const photo = employee.photo || createInitialAvatar(employee.firstName, employee.lastName);
 
     document.getElementById('profileImg').src = photo;
@@ -162,7 +117,7 @@ function showClockModal(empId) {
     document.getElementById('detailPosition').textContent = position;
     document.getElementById('detailDept').textContent = department;
 
-    const today = getTodayRecord(employee.empId);
+    const today = await getTodayRecord(employee.empId);
     updateRecordsDisplay(today);
 
     document.getElementById('loginModal').classList.remove('show');
@@ -194,14 +149,14 @@ function updateRecordsDisplay(today) {
     const timeInDisplay = document.getElementById("timeInDisplay");
     const timeOutDisplay = document.getElementById("timeOutDisplay");
 
-    if (today && today.timeIn) {
-        timeInDisplay.textContent = today.timeIn;
+    if (today && today.time_in) {
+        timeInDisplay.textContent = formatTimeFromISO(today.time_in);
     } else {
         timeInDisplay.textContent = "--:--:--";
     }
 
-    if (today && today.timeOut) {
-        timeOutDisplay.textContent = today.timeOut;
+    if (today && today.time_out) {
+        timeOutDisplay.textContent = formatTimeFromISO(today.time_out);
     } else {
         timeOutDisplay.textContent = "--:--:--";
     }
@@ -217,7 +172,7 @@ function showAlert(message, type = 'success', alertId = 'alertBox2') {
 
 // ==================== TIME IN/OUT HANDLERS ====================
 
-function handleTimeIn() {
+async function handleTimeIn() {
     if (!currentEmployee) {
         showAlert('No employee logged in', 'error');
         return;
@@ -225,95 +180,66 @@ function handleTimeIn() {
 
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
-    const records = getRecords();
 
-    const alreadyLoggedIn = records.some(r =>
-        r.id === currentEmployee.empId &&
-        r.date === today &&
-        r.timeOut === null
-    );
+    try {
+        // Check if already logged in today
+        const existing = await getTodayRecord(currentEmployee.empId);
+        
+        if (existing) {
+            showAlert('Already clocked in today!', 'warning');
+            return;
+        }
 
-    if (alreadyLoggedIn) {
-        showAlert('Already clocked in today!', 'warning');
-        return;
+        // Insert new attendance record
+        const { error } = await supabase
+            .from('attendance_records')
+            .insert({
+                employee_id: currentEmployee.empId,
+                date: today,
+                time_in: now.toISOString(),
+                time_out: null
+            });
+
+        if (error) throw error;
+
+        showAlert('✓ Clocked In Successfully!', 'success');
+        const todayRecord = await getTodayRecord(currentEmployee.empId);
+        updateRecordsDisplay(todayRecord);
+    } catch (error) {
+        console.error('Error clocking in:', error);
+        showAlert('Error recording time in: ' + error.message, 'error');
     }
-
-    const newRecord = {
-        id: currentEmployee.empId,
-        name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
-        department: currentEmployee.department,
-        position: currentEmployee.position,
-        date: today,
-        timeIn: formatTime(now),
-        timeOut: null
-    };
-
-    records.push(newRecord);
-    saveRecords(records);
-
-    // TODO: Insert to Supabase
-    // const { error } = await supabase
-    //     .from('attendance')
-    //     .insert({
-    //         employee_id: currentEmployee.employee_id || currentEmployee.empId,
-    //         timestamp: now.toISOString(),
-    //         time_in: now.toISOString(),
-    //         time_out: null,
-    //         date: today
-    //     });
-    //
-    // if (error) {
-    //     showAlert('Error recording time in: ' + error.message, 'error');
-    //     return;
-    // }
-
-    showAlert('✓ Clocked In Successfully!', 'success');
-    updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
 }
 
-function handleTimeOut() {
+async function handleTimeOut() {
     if (!currentEmployee) {
         showAlert('No employee logged in', 'error');
         return;
     }
 
-    const todayRecord = getTodayRecord(currentEmployee.empId);
+    try {
+        const todayRecord = await getTodayRecord(currentEmployee.empId);
 
-    if (!todayRecord || todayRecord.timeOut !== null) {
-        showAlert('You need to clock in first!', 'error');
-        return;
-    }
+        if (!todayRecord) {
+            showAlert('You need to clock in first!', 'error');
+            return;
+        }
 
-    const now = new Date();
-    const records = getRecords();
+        const now = new Date();
 
-    const index = records.findIndex(r =>
-        r.id === currentEmployee.empId &&
-        r.date === todayRecord.date &&
-        r.timeOut === null
-    );
+        // Update time_out
+        const { error } = await supabase
+            .from('attendance_records')
+            .update({ time_out: now.toISOString() })
+            .eq('id', todayRecord.id);
 
-    if (index !== -1) {
-        records[index].timeOut = formatTime(now);
-        saveRecords(records);
-
-        // TODO: Update Supabase
-        // const { error } = await supabase
-        //     .from('attendance')
-        //     .update({ time_out: now.toISOString() })
-        //     .eq('employee_id', currentEmployee.employee_id || currentEmployee.empId)
-        //     .is('time_out', null)
-        //     .eq('date', todayRecord.date);
-        //
-        // if (error) {
-        //     showAlert('Error recording time out: ' + error.message, 'error');
-        //     return;
-        // }
+        if (error) throw error;
 
         showAlert('✓ Clocked Out Successfully!', 'success');
-        updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
-    } else {
-        showAlert('Error recording time out', 'error');
+        updateRecordsDisplay(null);
+    } catch (error) {
+        console.error('Error clocking out:', error);
+        showAlert('Error recording time out: ' + error.message, 'error');
     }
 }
 
@@ -336,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnLogout = document.getElementById("btnLogout");
     const btnClockInOut = document.getElementById("btnClockInOut");
 
-    btnLogin.addEventListener('click', () => {
+    btnLogin.addEventListener('click', async () => {
         const empId = inputEmpId.value.trim();
         
         if (!empId) {
@@ -344,21 +270,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const employee = getEmployeeById(empId);
+        const employee = await getEmployeeById(empId);
         
         if (!employee) {
             showAlert('Employee ID not found in system', 'error', 'alertBox');
             return;
         }
 
-        // TODO: Use Supabase
-        // const employee = await getEmployeeByIdFromSupabase(empId);
-        // if (!employee) {
-        //     showAlert('Employee ID not found in system', 'error', 'alertBox');
-        //     return;
-        // }
-
-        showClockModal(empId);
+        await showClockModal(empId);
         inputEmpId.value = '';
     });
 
@@ -373,15 +292,15 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginModal();
     });
 
-    btnClockInOut.addEventListener('click', () => {
+    btnClockInOut.addEventListener('click', async () => {
         if (!currentEmployee) return;
         
-        const today = getTodayRecord(currentEmployee.empId);
+        const today = await getTodayRecord(currentEmployee.empId);
         
-        if (!today || today.timeOut !== null) {
-            handleTimeIn();
+        if (!today) {
+            await handleTimeIn();
         } else {
-            handleTimeOut();
+            await handleTimeOut();
         }
     });
 

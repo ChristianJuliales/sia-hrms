@@ -1,46 +1,95 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const supabase = window.supabaseClient;
   
   // ===================================================
-  // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
+  // FETCH DATA FROM SUPABASE
   // ===================================================
   async function fetchLeaves() {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase
-    //   .from('leave_requests')
-    //   .select('*')
-    //   .eq('status', 'pending');
-    return [];
+    try {
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('status', 'pending')
+        .order('id', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching leaves:', error);
+      return [];
+    }
   }
 
   async function updateLeaveStatus(id, status) {
-    // TODO: Implement Supabase update
-    // const { error } = await supabase
-    //   .from('leave_requests')
-    //   .update({ 
-    //     status: status,
-    //     decisionAt: new Date().toISOString()
-    //   })
-    //   .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ 
+          status: status,
+          decisionAt: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating leave status:', error);
+      alert('❌ Error updating leave: ' + error.message);
+      return false;
+    }
   }
 
   async function fetchLeaveBalances() {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase.from('leave_balances').select('*');
-    return {};
+    try {
+      const { data, error } = await supabase.from('leave_balances').select('*');
+      if (error) throw error;
+      
+      // Convert array to object keyed by employeeId
+      const balances = {};
+      (data || []).forEach(item => {
+        balances[item.employeeId] = item;
+      });
+      return balances;
+    } catch (error) {
+      console.error('Error fetching balances:', error);
+      return {};
+    }
   }
 
   async function updateLeaveBalance(employeeId, newBalance) {
-    // TODO: Implement Supabase update
-    // const { error } = await supabase
-    //   .from('leave_balances')
-    //   .update({ balance: newBalance })
-    //   .eq('employeeId', employeeId);
-  }
+    try {
+      // Check if balance exists
+      const { data: existing } = await supabase
+        .from('leave_balances')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
 
-  async function fetchEmployees() {
-    // TODO: Implement Supabase fetch
-    // const { data, error } = await supabase.from('employees').select('*');
-    return [];
+      if (existing) {
+        // Update existing balance
+        const { error } = await supabase
+          .from('leave_balances')
+          .update({ balance: newBalance })
+          .eq('employeeId', employeeId);
+        
+        if (error) throw error;
+      } else {
+        // Insert new balance
+        const { error } = await supabase
+          .from('leave_balances')
+          .insert([{ 
+            employeeId: employeeId, 
+            balance: newBalance,
+            year: new Date().getFullYear()
+          }]);
+        
+        if (error) throw error;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      return false;
+    }
   }
 
   // ===================================================
@@ -56,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const d = new Date(dateStr);
     const now = new Date();
     const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay()); // sunday of this week
+    start.setDate(now.getDate() - now.getDay());
     start.setHours(0,0,0,0);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
@@ -97,6 +146,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // RENDER TABLE
   // ===================================================
   async function renderManagerTable(filter = 'all') {
+    leaveList.innerHTML = '<p class="no-leave">Loading...</p>';
+    
     const leaves = await fetchLeaves();
     const filtered = applyDateFilter(leaves, filter);
 
@@ -168,6 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function handleDecision(id, decision, days = 0, empId = null) {
     if (decision === 'approved') {
+      if (!confirm(`Approve this leave request for ${days} day(s)?`)) return;
+      
       // Deduct days from balance
       const balances = await fetchLeaveBalances();
       
@@ -175,17 +228,30 @@ document.addEventListener("DOMContentLoaded", () => {
         balances[empId] = { balance: 12, year: new Date().getFullYear() };
       }
 
-      const newBalance = Math.max(0, (balances[empId].balance || 12) - days);
-      await updateLeaveBalance(empId, newBalance);
-      await updateLeaveStatus(id, 'approved');
-      await renderManagerTable(dateFilter.value);
+      const currentBalance = balances[empId].balance || 12;
+      const newBalance = Math.max(0, currentBalance - days);
       
-      alert(`✅ Leave request approved! New balance: ${newBalance} days`);
+      // Update balance first
+      const balanceUpdated = await updateLeaveBalance(empId, newBalance);
+      
+      if (balanceUpdated) {
+        // Then update leave status
+        const statusUpdated = await updateLeaveStatus(id, 'approved');
+        
+        if (statusUpdated) {
+          alert(`✅ Leave request approved! New balance: ${newBalance} days`);
+          await renderManagerTable(dateFilter.value);
+        }
+      }
     } else if (decision === 'rejected') {
-      await updateLeaveStatus(id, 'rejected');
-      await renderManagerTable(dateFilter.value);
+      if (!confirm('Reject this leave request?')) return;
       
-      alert('❌ Leave request rejected');
+      const statusUpdated = await updateLeaveStatus(id, 'rejected');
+      
+      if (statusUpdated) {
+        alert('❌ Leave request rejected');
+        await renderManagerTable(dateFilter.value);
+      }
     }
   }
 
@@ -197,5 +263,15 @@ document.addEventListener("DOMContentLoaded", () => {
   dateFilter.addEventListener('change', () => {
     renderManagerTable(dateFilter.value);
   });
+
+  // ===================================================
+  // REALTIME SUBSCRIPTION
+  // ===================================================
+  supabase
+    .channel('leave-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
+      renderManagerTable(dateFilter.value);
+    })
+    .subscribe();
 
 });
