@@ -1,10 +1,3 @@
-const registeredEmails = [
-    'earvinjohnlopez01@gmail.com',
-    'delacruz.juan@rmt.com',
-    'admin@rmt.com',
-    'user@rmt.com'
-];
-
 let currentEmail = null;
 let verificationCode = null;
 
@@ -26,48 +19,108 @@ const errorMessage = document.getElementById('errorMessage');
 const codeError = document.getElementById('codeError');
 const resetError = document.getElementById('resetError');
 
-// Step 1: Send verification code
-forgotForm.addEventListener('submit', (e) => {
+// Step 1: Send verification code - Ready for Supabase
+forgotForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = resetEmailInput.value.trim().toLowerCase();
 
     successMessage.style.display = 'none';
     errorMessage.style.display = 'none';
 
-    if (!registeredEmails.includes(email)) {
-        errorMessage.textContent = '❌ Email not found!';
-        errorMessage.style.display = 'block';
-        return;
-    }
+    // TODO: Replace with Supabase email verification
+    // Example:
+    // try {
+    //   // Check if email exists in employees table
+    //   const { data: employee, error } = await supabase
+    //     .from('employees')
+    //     .select('email')
+    //     .eq('email', email)
+    //     .single();
+    //
+    //   if (error || !employee) {
+    //     errorMessage.textContent = '❌ Email not found!';
+    //     errorMessage.style.display = 'block';
+    //     return;
+    //   }
+    //
+    //   // Send password reset email using Supabase Auth
+    //   const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+    //     redirectTo: 'https://your-app-url.com/reset-password.html'
+    //   });
+    //
+    //   if (resetError) throw resetError;
+    //
+    //   currentEmail = email;
+    //   successMessage.textContent = '✅ Password reset email sent! Check your inbox.';
+    //   successMessage.style.display = 'block';
+    //
+    //   // Option 1: Use Supabase's built-in email reset (recommended)
+    //   // The user will receive an email with a reset link
+    //   
+    //   // Option 2: Use custom verification code (if you prefer)
+    //   // Generate and store verification code in a separate table
+    //   // verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    //   // await supabase.from('verification_codes').insert({
+    //   //   email: email,
+    //   //   code: verificationCode,
+    //   //   expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    //   // });
+    //
+    //   stepEmail.style.display = 'none';
+    //   stepCode.style.display = 'block';
+    // } catch (error) {
+    //   errorMessage.textContent = '❌ ' + error.message;
+    //   errorMessage.style.display = 'block';
+    // }
 
-    currentEmail = email;
-    verificationCode = '123456'; // fixed code for demo
-    console.log(`Verification code for ${email}: ${verificationCode}`);
-
-    successMessage.textContent = '✅ Verification code sent! (Demo code: 123456)';
-    successMessage.style.display = 'block';
-
-    // Show verification step
-    stepEmail.style.display = 'none';
-    stepCode.style.display = 'block';
+    errorMessage.textContent = '⚠️ Please connect to Supabase first';
+    errorMessage.style.display = 'block';
 });
 
-// Step 2: Verify code
-codeForm.addEventListener('submit', (e) => {
+// Step 2: Verify code - Ready for Supabase
+codeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     codeError.style.display = 'none';
 
-    if (verificationInput.value.trim() === verificationCode) {
-        stepCode.style.display = 'none';
-        stepReset.style.display = 'block';
-    } else {
-        codeError.textContent = '❌ Incorrect verification code.';
-        codeError.style.display = 'block';
-    }
+    const enteredCode = verificationInput.value.trim();
+
+    // TODO: Replace with Supabase verification
+    // Example:
+    // try {
+    //   // Verify code from database
+    //   const { data: codeData, error } = await supabase
+    //     .from('verification_codes')
+    //     .select('*')
+    //     .eq('email', currentEmail)
+    //     .eq('code', enteredCode)
+    //     .gt('expires_at', new Date().toISOString())
+    //     .single();
+    //
+    //   if (error || !codeData) {
+    //     codeError.textContent = '❌ Incorrect or expired verification code.';
+    //     codeError.style.display = 'block';
+    //     return;
+    //   }
+    //
+    //   // Delete used code
+    //   await supabase
+    //     .from('verification_codes')
+    //     .delete()
+    //     .eq('id', codeData.id);
+    //
+    //   stepCode.style.display = 'none';
+    //   stepReset.style.display = 'block';
+    // } catch (error) {
+    //   codeError.textContent = '❌ ' + error.message;
+    //   codeError.style.display = 'block';
+    // }
+
+    codeError.textContent = '⚠️ Please connect to Supabase first';
+    codeError.style.display = 'block';
 });
 
-// Step 3: Reset password
-resetForm.addEventListener('submit', (e) => {
+// Step 3: Reset password - Ready for Supabase
+resetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     resetError.style.display = 'none';
 
@@ -86,7 +139,23 @@ resetForm.addEventListener('submit', (e) => {
         return;
     }
 
-    console.log(`Password for ${currentEmail} reset to: ${newPass}`);
-    alert('✅ Password reset successful! Redirecting to login page.');
-    window.location.href = 'index.html';
+    // TODO: Replace with Supabase password update
+    // Example:
+    // try {
+    //   // Update password in Supabase Auth
+    //   const { error } = await supabase.auth.updateUser({
+    //     password: newPass
+    //   });
+    //
+    //   if (error) throw error;
+    //
+    //   alert('✅ Password reset successful! Redirecting to login page.');
+    //   window.location.href = 'index.html';
+    // } catch (error) {
+    //   resetError.textContent = '❌ ' + error.message;
+    //   resetError.style.display = 'block';
+    // }
+
+    resetError.textContent = '⚠️ Please connect to Supabase first';
+    resetError.style.display = 'block';
 });

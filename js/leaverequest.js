@@ -1,30 +1,57 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const STORAGE_KEYS = {
-    LEAVES: 'leaveRequests',
-    BALANCES: 'leaveBalances',
-    EMPLOYEES: 'employees'
-  };
-
-  function readLeaves() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
-  }
-  function writeLeaves(arr) {
-    localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(arr));
-  }
-  function readBalances() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.BALANCES) || '{}');
-  }
-  function writeBalances(obj) {
-    localStorage.setItem(STORAGE_KEYS.BALANCES, JSON.stringify(obj));
-  }
-  function readEmployees() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.EMPLOYEES) || '[]');
+  
+  // ===================================================
+  // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
+  // ===================================================
+  async function fetchLeaves() {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase
+    //   .from('leave_requests')
+    //   .select('*')
+    //   .eq('status', 'pending');
+    return [];
   }
 
+  async function updateLeaveStatus(id, status) {
+    // TODO: Implement Supabase update
+    // const { error } = await supabase
+    //   .from('leave_requests')
+    //   .update({ 
+    //     status: status,
+    //     decisionAt: new Date().toISOString()
+    //   })
+    //   .eq('id', id);
+  }
+
+  async function fetchLeaveBalances() {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase.from('leave_balances').select('*');
+    return {};
+  }
+
+  async function updateLeaveBalance(employeeId, newBalance) {
+    // TODO: Implement Supabase update
+    // const { error } = await supabase
+    //   .from('leave_balances')
+    //   .update({ balance: newBalance })
+    //   .eq('employeeId', employeeId);
+  }
+
+  async function fetchEmployees() {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase.from('employees').select('*');
+    return [];
+  }
+
+  // ===================================================
+  // DOM ELEMENTS
+  // ===================================================
   const leaveList = document.getElementById('leaveList');
   const dateFilter = document.getElementById('dateFilter');
 
-  // filter helpers
+  // ===================================================
+  // FILTER HELPERS
+  // ===================================================
   function inThisWeek(dateStr) {
     const d = new Date(dateStr);
     const now = new Date();
@@ -53,8 +80,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderManagerTable(filter = 'all') {
-    const leaves = readLeaves().filter(l => l.status === 'pending');
+  // ===================================================
+  // CALCULATE LEAVE DAYS
+  // ===================================================
+  function calculateDays(startDate, endDate) {
+    const sd = new Date(startDate); 
+    sd.setHours(0,0,0,0);
+    const ed = new Date(endDate); 
+    ed.setHours(0,0,0,0);
+    const ms = 24*60*60*1000;
+    const diff = Math.round((ed - sd)/ms) + 1;
+    return diff > 0 ? diff : 0;
+  }
+
+  // ===================================================
+  // RENDER TABLE
+  // ===================================================
+  async function renderManagerTable(filter = 'all') {
+    const leaves = await fetchLeaves();
     const filtered = applyDateFilter(leaves, filter);
 
     if (!filtered || filtered.length === 0) {
@@ -81,13 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </thead>
           <tbody>
             ${filtered.map(r => {
-              const days = (function(s,e){
-                const sd = new Date(s); sd.setHours(0,0,0,0);
-                const ed = new Date(e); ed.setHours(0,0,0,0);
-                const ms = 24*60*60*1000;
-                const diff = Math.round((ed - sd)/ms) + 1;
-                return diff > 0 ? diff : 0;
-              })(r.startDate, r.endDate);
+              const days = calculateDays(r.startDate, r.endDate);
 
               return `
                 <tr>
@@ -101,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td>${days}</td>
                   <td>${r.reason || '-'}</td>
                   <td>
-                    <button class="action-btn btn-approve" data-id="${r.id}">Approve</button>
+                    <button class="action-btn btn-approve" data-id="${r.id}" data-days="${days}" data-emp="${r.employeeId}">Approve</button>
                     <button class="action-btn btn-reject" data-id="${r.id}" style="background:#b91c1c;">Reject</button>
                   </td>
                 </tr>
@@ -114,55 +151,47 @@ document.addEventListener("DOMContentLoaded", () => {
     leaveList.innerHTML = tableHTML;
   }
 
-  // Approve / Reject handlers
-  leaveList.addEventListener('click', (e) => {
+  // ===================================================
+  // APPROVE / REJECT HANDLERS
+  // ===================================================
+  leaveList.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-approve')) {
       const id = parseInt(e.target.dataset.id);
-      handleDecision(id, 'approved');
+      const days = parseInt(e.target.dataset.days);
+      const empId = e.target.dataset.emp;
+      await handleDecision(id, 'approved', days, empId);
     } else if (e.target.classList.contains('btn-reject')) {
       const id = parseInt(e.target.dataset.id);
-      handleDecision(id, 'rejected');
+      await handleDecision(id, 'rejected');
     }
   });
 
-  function handleDecision(id, decision) {
-    const leaves = readLeaves();
-    const idx = leaves.findIndex(l => l.id === id);
-    if (idx === -1) return;
-    const request = leaves[idx];
-
+  async function handleDecision(id, decision, days = 0, empId = null) {
     if (decision === 'approved') {
-      // deduct days from balance
-      const days = (function(s,e){
-        const sd = new Date(s); sd.setHours(0,0,0,0);
-        const ed = new Date(e); ed.setHours(0,0,0,0);
-        const ms = 24*60*60*1000;
-        const diff = Math.round((ed - sd)/ms) + 1;
-        return diff > 0 ? diff : 0;
-      })(request.startDate, request.endDate);
-
-      const balances = readBalances();
-      if (!balances[request.employeeId]) {
-        // ensure a balance object
-        balances[request.employeeId] = { balance: 12, year: new Date().getFullYear() };
+      // Deduct days from balance
+      const balances = await fetchLeaveBalances();
+      
+      if (!balances[empId]) {
+        balances[empId] = { balance: 12, year: new Date().getFullYear() };
       }
 
-      balances[request.employeeId].balance = Math.max(0, (balances[request.employeeId].balance || 12) - days);
-      writeBalances(balances);
-
-      leaves[idx].status = 'approved';
-      leaves[idx].decisionAt = new Date().toISOString();
-      writeLeaves(leaves);
-      renderManagerTable(dateFilter.value);
+      const newBalance = Math.max(0, (balances[empId].balance || 12) - days);
+      await updateLeaveBalance(empId, newBalance);
+      await updateLeaveStatus(id, 'approved');
+      await renderManagerTable(dateFilter.value);
+      
+      alert(`✅ Leave request approved! New balance: ${newBalance} days`);
     } else if (decision === 'rejected') {
-      leaves[idx].status = 'rejected';
-      leaves[idx].decisionAt = new Date().toISOString();
-      writeLeaves(leaves);
-      renderManagerTable(dateFilter.value);
+      await updateLeaveStatus(id, 'rejected');
+      await renderManagerTable(dateFilter.value);
+      
+      alert('❌ Leave request rejected');
     }
   }
 
-  // initial render and filter binding
+  // ===================================================
+  // INITIAL RENDER AND FILTER BINDING
+  // ===================================================
   renderManagerTable('all');
 
   dateFilter.addEventListener('change', () => {

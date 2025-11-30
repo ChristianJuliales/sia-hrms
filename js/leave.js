@@ -23,10 +23,45 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(STORAGE_KEYS.BALANCES, JSON.stringify(obj));
   }
 
-  // ⛔ REMOVE sample fallback — always use actual employee.js data
   function readEmployees() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.EMPLOYEES) || '[]');
   }
+
+  // TODO: Replace with Supabase functions
+  // async function fetchLeavesFromSupabase() {
+  //   const { data, error } = await supabase
+  //     .from('leave_requests')
+  //     .select(`
+  //       *,
+  //       employees(employee_id, first_name, last_name, positions(position_name, departments(department_name)))
+  //     `)
+  //     .order('created_at', { ascending: false });
+  //
+  //   if (error) {
+  //     console.error('Error fetching leaves:', error);
+  //     return [];
+  //   }
+  //
+  //   return data;
+  // }
+
+  // async function fetchEmployeesFromSupabase() {
+  //   const { data, error } = await supabase
+  //     .from('employees')
+  //     .select(`
+  //       employee_id,
+  //       first_name,
+  //       last_name,
+  //       positions(position_name, departments(department_name))
+  //     `);
+  //
+  //   if (error) {
+  //     console.error('Error fetching employees:', error);
+  //     return [];
+  //   }
+  //
+  //   return data;
+  // }
 
   function resetBalancesIfNewYear() {
     const balances = readBalances();
@@ -95,45 +130,47 @@ document.addEventListener("DOMContentLoaded", () => {
   resetBalancesIfNewYear();
   ensureBalancesForEmployees();
 
-  // leave.js - FINALIZED renderBalancesTable function 
-  // ===== Render Functions =====
-  function renderBalancesTable() {
-    const employees = readEmployees();
-    const balances = readBalances();
+  // ===== Render Functions =====
+  function renderBalancesTable() {
+    const employees = readEmployees();
+    const balances = readBalances();
 
-    if (!employees || employees.length === 0) {
-      leaveList.innerHTML = `<p class="no-leave">No employees found. Add employees from the Employee page first.</p>`;
-      return;
-    }
-    const html = `
-      <div class="table-responsive">
-        <table class="leaves-table">
-          <thead>
-            <tr>
-              <th>Employee ID</th>
-              <th>Employee Name</th>
-              <th>Department</th>
-              <th>Position</th>
-              <th>Available Leaves</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-          ${
-            employees.map(emp => {
-                const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                const empID = emp.empId || '';
+    if (!employees || employees.length === 0) {
+      leaveList.innerHTML = `<p class="no-leave">No employees found. Add employees from the Employee page first.</p>`;
+      return;
+    }
 
-                // MINIFIED HTML - all content for the row is on a single line
-                return `<tr><td>${empID}</td><td>${fullName}</td><td>${emp.department || '-'}</td><td>${emp.position || '-'}</td><td>${balances[empID] ? balances[empID].balance : 12}</td><td><button class="action-btn btn-open-request" data-id="${empID}" data-name="${fullName}" data-dept="${emp.department || ''}" data-pos="${emp.position || ''}">+ Leave Request</button></td></tr>`;
-            }).join('')
-          }
-          </tbody>
-        </table>
-      </div>
-    `;
-    leaveList.innerHTML = html;
-  }
+    // TODO: Use Supabase data
+    // const employees = await fetchEmployeesFromSupabase();
+
+    const html = `
+      <div class="table-responsive">
+        <table class="leaves-table">
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Employee Name</th>
+              <th>Department</th>
+              <th>Position</th>
+              <th>Available Leaves</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          ${
+            employees.map(emp => {
+                const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+                const empID = emp.empId || '';
+
+                return `<tr><td>${empID}</td><td>${fullName}</td><td>${emp.department || '-'}</td><td>${emp.position || '-'}</td><td>${balances[empID] ? balances[empID].balance : 12}</td><td><button class="action-btn btn-open-request" data-id="${empID}" data-name="${fullName}" data-dept="${emp.department || ''}" data-pos="${emp.position || ''}">+ Leave Request</button></td></tr>`;
+            }).join('')
+          }
+          </tbody>
+        </table>
+      </div>
+    `;
+    leaveList.innerHTML = html;
+  }
 
   function renderLeavesTab(filter='all') {
     const leaves = readLeaves();
@@ -142,6 +179,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filter !== 'all') {
       filtered = leaves.filter(l => l.status === filter);
     }
+
+    // TODO: Use Supabase data
+    // const leaves = await fetchLeavesFromSupabase();
+    // let filtered = leaves;
+    // if (filter !== 'all') {
+    //   filtered = leaves.filter(l => l.status === filter);
+    // }
 
     if (!filtered.length) {
       leaveList.innerHTML = `<p class="no-leave">No ${filter} requests found.</p>`;
@@ -205,16 +249,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===== Submit Leave Request =====
-  leaveForm.addEventListener('submit', (e) => {
+  leaveForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const employeeId = employeeIdInput.value.trim();
     const employeeName = employeeNameInput.value.trim();
-
     const leaveType = leaveTypeSelect.value;
     const startDate = startDateInput.value;
     const endDate = endDateInput.value;
-
     const reason = reasonInput.value.trim();
 
     if (!startDate || !endDate) {
@@ -226,6 +268,25 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("End date cannot be earlier than start date.");
       return;
     }
+
+    // TODO: Insert to Supabase
+    // const { data, error } = await supabase
+    //   .from('leave_requests')
+    //   .insert({
+    //     employee_id: employeeId,
+    //     leave_type: leaveType,
+    //     start_date: startDate,
+    //     end_date: endDate,
+    //     reason: reason,
+    //     status: 'pending'
+    //   })
+    //   .select()
+    //   .single();
+    //
+    // if (error) {
+    //   alert('Error submitting leave request: ' + error.message);
+    //   return;
+    // }
 
     const leaves = readLeaves();
     const newLeave = {
@@ -260,4 +321,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Initial Render =====
   renderBalancesTable();
+  // TODO: Call fetchEmployeesFromSupabase() and fetchLeavesFromSupabase()
 });

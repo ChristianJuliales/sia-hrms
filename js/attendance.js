@@ -74,29 +74,35 @@ if (window.location.pathname.includes("attendance.html")) {
     const userRole = loggedInUser.role || 'Employee';
     const userId = loggedInUser.id || '';
 
-    // Create sample data if empty
-    if (getRecords().length === 0) {
-        saveRecords([
-            {
-                id: "hr",
-                name: "HR Admin",
-                department: "Human Resources",
-                position: "HR Manager",
-                date: today,
-                timeIn: "08:00:00 AM",
-                timeOut: "05:00:00 PM"
-            },
-            {
-                id: "emp",
-                name: "John Doe",
-                department: "Sales",
-                position: "Sales Associate",
-                date: today,
-                timeIn: "08:15:00 AM",
-                timeOut: "--"
-            }
-        ]);
-    }
+    // TODO: Remove sample data creation - Fetch from Supabase instead
+    // Example:
+    // async function loadAttendanceFromSupabase() {
+    //     const { data, error } = await supabase
+    //         .from('attendance')
+    //         .select(`
+    //             *,
+    //             employees(employee_id, first_name, last_name, positions(position_name, departments(department_name)))
+    //         `)
+    //         .order('timestamp', { ascending: false });
+    //
+    //     if (error) {
+    //         console.error('Error loading attendance:', error);
+    //         return;
+    //     }
+    //
+    //     // Transform Supabase data to match current structure
+    //     const records = data.map(record => ({
+    //         id: record.employee_id,
+    //         name: `${record.employees.first_name} ${record.employees.last_name}`,
+    //         department: record.employees.positions.departments.department_name,
+    //         position: record.employees.positions.position_name,
+    //         date: new Date(record.timestamp).toISOString().split('T')[0],
+    //         timeIn: formatTime(record.time_in),
+    //         timeOut: record.time_out ? formatTime(record.time_out) : '--'
+    //     }));
+    //
+    //     saveRecords(records);
+    // }
 
     /* ---------------------------
        ROLE-BASED UI ADJUSTMENTS
@@ -107,12 +113,6 @@ if (window.location.pathname.includes("attendance.html")) {
             if (searchInput) {
                 searchInput.parentElement.style.display = "none";
             }
-            
-            // Hide the "Log Attendance" button for employees (optional)
-            // Uncomment if you don't want employees to manually log attendance
-            // if (logAttendanceBtn) {
-            //     logAttendanceBtn.style.display = "none";
-            // }
             
             // Change the header text
             const header = document.querySelector("header h1");
@@ -128,7 +128,7 @@ if (window.location.pathname.includes("attendance.html")) {
     }
 
     /* ---------------------------
-       MAIN TABLE LOADING (UPDATED)
+       MAIN TABLE LOADING
     --------------------------- */
     function loadTable() {
         const selectedDate = dateInput.value;
@@ -285,6 +285,15 @@ if (window.location.pathname.includes("attendance.html")) {
             );
 
             saveRecords(all);
+            
+            // TODO: Update Supabase
+            // await supabase
+            //     .from('attendance')
+            //     .update({ time_out: new Date().toISOString() })
+            //     .eq('employee_id', empId)
+            //     .eq('time_out', null)
+            //     .eq('date', record.date);
+            
             loadTable();
             alert("Successfully logged out!");
         }
@@ -313,5 +322,6 @@ if (window.location.pathname.includes("attendance.html")) {
     adjustUIForRole();
     
     // Initial load
+    // TODO: Call loadAttendanceFromSupabase() here
     loadTable();
 }

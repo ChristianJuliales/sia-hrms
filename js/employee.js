@@ -1,5 +1,4 @@
-// ==================== FIXED employee.js ====================
-// Includes: View-page file-link fix + Photo 2x2 consistency + Professional View Page
+// ==================== EMPLOYEE.JS - SUPABASE READY ====================
 
 (function(){
   /* ---------- Utilities ---------- */
@@ -68,6 +67,50 @@
 
     gotoAdd && gotoAdd.addEventListener('click', ()=> window.location.href = 'employee_add.html');
 
+    // TODO: Load employees from Supabase
+    // async function loadEmployeesFromSupabase() {
+    //   const { data, error } = await supabase
+    //     .from('employees')
+    //     .select(`
+    //       *,
+    //       positions(
+    //         position_name,
+    //         departments(department_name),
+    //         roles(role_name)
+    //       )
+    //     `)
+    //     .order('created_at', { ascending: false });
+    //
+    //   if (error) {
+    //     console.error('Error loading employees:', error);
+    //     return;
+    //   }
+    //
+    //   // Transform to match current structure
+    //   const transformedEmployees = data.map(emp => ({
+    //     empId: emp.employee_id,
+    //     firstName: emp.first_name,
+    //     lastName: emp.last_name,
+    //     middleName: emp.middle_name,
+    //     email: emp.email,
+    //     department: emp.positions?.departments?.department_name || '',
+    //     position: emp.positions?.position_name || '',
+    //     status: emp.employment_status,
+    //     salary: emp.salary,
+    //     dob: emp.date_of_birth,
+    //     gender: emp.gender,
+    //     phone: emp.phone,
+    //     address: emp.address,
+    //     dateHired: emp.date_hired,
+    //     photo: emp.photo_url,
+    //     files: emp.files || []
+    //   }));
+    //
+    //   setEmployees(transformedEmployees);
+    //   employees = transformedEmployees;
+    //   renderPage();
+    // }
+
     function populateDeptOptions(preserveValue) {
       const depts = getUniqueDepartments(getEmployees());
       const selected = preserveValue !== undefined ? preserveValue : departmentFilter.value;
@@ -131,6 +174,7 @@
 
     populateDeptOptions('');
     renderPage();
+    // TODO: Call loadEmployeesFromSupabase() here
 
     search && search.addEventListener('input', ()=> { currentPage = 1; renderPage(); });
     departmentFilter && departmentFilter.addEventListener('change', ()=> { currentPage = 1; renderPage(); });
@@ -145,6 +189,14 @@
 
       if (e.target.classList.contains('delete')) {
         if (!confirm('Delete this employee?')) return;
+        
+        // TODO: Delete from Supabase
+        // const emp = employeesAll[empIndex];
+        // await supabase
+        //   .from('employees')
+        //   .delete()
+        //   .eq('id', emp.id);
+        
         employeesAll.splice(empIndex,1);
         setEmployees(employeesAll);
         renderPage();
@@ -200,6 +252,40 @@
         photo: photoBase64,
         files: filesArr
       };
+
+      // TODO: Insert to Supabase
+      // const { data, error } = await supabase
+      //   .from('employees')
+      //   .insert({
+      //     employee_id: emp.empId,
+      //     first_name: emp.firstName,
+      //     last_name: emp.lastName,
+      //     middle_name: emp.middleName,
+      //     email: emp.email,
+      //     date_of_birth: emp.dob,
+      //     gender: emp.gender,
+      //     phone: emp.phone,
+      //     address: emp.address,
+      //     date_hired: emp.dateHired,
+      //     employment_status: emp.status,
+      //     salary: emp.salary,
+      //     photo_url: photoBase64,
+      //     files: filesArr
+      //   })
+      //   .select()
+      //   .single();
+      //
+      // if (error) {
+      //   alert('Error adding employee: ' + error.message);
+      //   return;
+      // }
+      //
+      // // Assign position and department
+      // await supabase.from('positions').insert({
+      //   employee_id: data.id,
+      //   position_name: emp.position,
+      //   department_id: departmentId // get from departments table
+      // });
 
       employees.push(emp);
       setEmployees(employees);
@@ -287,6 +373,16 @@
         files: filesArr
       };
 
+      // TODO: Update in Supabase
+      // await supabase
+      //   .from('employees')
+      //   .update({
+      //     first_name: updated.firstName,
+      //     last_name: updated.lastName,
+      //     // ... other fields
+      //   })
+      //   .eq('employee_id', updated.empId);
+
       employees[idx] = updated;
       setEmployees(employees);
       window.location.href = 'employee.html';
@@ -308,21 +404,15 @@
     const emp = employees[idx];
     const content = qs('viewContent');
 
-    // Get initials for placeholder
     const initials = (emp.firstName.charAt(0) + emp.lastName.charAt(0)).toUpperCase();
-
-    // Photo HTML
     const photoHTML = emp.photo 
       ? `<img class="profile-photo" src="${emp.photo}" alt="${emp.firstName} ${emp.lastName}">` 
       : `<div class="profile-photo-placeholder">${initials}</div>`;
 
-    // Status class
     const statusClass = `status-${emp.status.toLowerCase()}`;
 
-    // Build profile HTML
     content.innerHTML = `
       <div class="profile-container">
-        <!-- Profile Header -->
         <div class="profile-header">
           <div class="profile-photo-container">
             ${photoHTML}
@@ -340,7 +430,6 @@
           </div>
         </div>
 
-        <!-- Contact Information -->
         <div class="profile-section">
           <div class="section-title">📞 Contact Information</div>
           <div class="info-grid">
@@ -359,7 +448,6 @@
           </div>
         </div>
 
-        <!-- Personal Information -->
         <div class="profile-section">
           <div class="section-title">👤 Personal Information</div>
           <div class="info-grid">
@@ -374,7 +462,6 @@
           </div>
         </div>
 
-        <!-- Employment Details -->
         <div class="profile-section">
           <div class="section-title">💼 Employment Details</div>
           <div class="info-grid">
@@ -401,7 +488,6 @@
           </div>
         </div>
 
-        <!-- Uploaded Files -->
         <div class="profile-section">
           <div class="section-title">📎 Uploaded Documents</div>
           <div class="files-list" id="filesList"></div>
@@ -409,7 +495,6 @@
       </div>
     `;
 
-    // Add files
     const filesContainer = content.querySelector('#filesList');
     if (emp.files && emp.files.length > 0) {
       emp.files.forEach(f => {
@@ -418,7 +503,6 @@
         fileItem.href = f.data;
         fileItem.download = f.name;
         
-        // Determine file icon based on extension
         const ext = f.name.split('.').pop().toLowerCase();
         let icon = '📄';
         if (['pdf'].includes(ext)) icon = '📕';

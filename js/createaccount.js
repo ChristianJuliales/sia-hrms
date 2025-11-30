@@ -1,13 +1,3 @@
-// Get existing users from localStorage
-function getExistingUsers() {
-  return JSON.parse(localStorage.getItem('registered_users')) || [];
-}
-
-// Save users to localStorage
-function saveUsers(users) {
-  localStorage.setItem('registered_users', JSON.stringify(users));
-}
-
 // DOM Elements
 const form = document.getElementById('createAccountForm');
 const firstNameInput = document.getElementById('firstName');
@@ -37,8 +27,8 @@ document.querySelectorAll('.toggle-password').forEach(icon => {
   });
 });
 
-// Form Submission
-form.addEventListener('submit', (e) => {
+// Form Submission - Ready for Supabase
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   successMessage.style.display = "none";
@@ -48,7 +38,7 @@ form.addEventListener('submit', (e) => {
   const lastName = lastNameInput.value.trim();
   const employeeId = employeeIdInput.value.trim();
   const email = emailInput.value.trim();
-  const role = roleSelect.value;   // NEW
+  const role = roleSelect.value;
   const password = passwordInput.value;
   const confirmPassword = confirmPasswordInput.value;
 
@@ -65,34 +55,52 @@ form.addEventListener('submit', (e) => {
     return showError("Passwords do not match.");
   }
 
-  // Check if email or employee ID already exists
-  const existingUsers = getExistingUsers();
-  const emailExists = existingUsers.some(u => u.email.toLowerCase() === email.toLowerCase());
-  const idExists = existingUsers.some(u => u.employeeId === employeeId);
+  // TODO: Replace with Supabase user creation
+  // Example:
+  // try {
+  //   // 1. Create auth user
+  //   const { data: authData, error: authError } = await supabase.auth.signUp({
+  //     email: email,
+  //     password: password,
+  //   });
+  //
+  //   if (authError) throw authError;
+  //
+  //   // 2. Get role_id from roles table
+  //   const { data: roleData } = await supabase
+  //     .from('roles')
+  //     .select('id')
+  //     .eq('role_name', role)
+  //     .single();
+  //
+  //   // 3. Insert into employees table
+  //   const { error: employeeError } = await supabase
+  //     .from('employees')
+  //     .insert({
+  //       id: authData.user.id,
+  //       employee_id: employeeId,
+  //       first_name: firstName,
+  //       last_name: lastName,
+  //       email: email,
+  //       created_at: new Date().toISOString()
+  //     });
+  //
+  //   if (employeeError) throw employeeError;
+  //
+  //   // 4. Assign role in positions table
+  //   await supabase
+  //     .from('positions')
+  //     .insert({
+  //       employee_id: authData.user.id,
+  //       role_id: roleData.id
+  //     });
+  //
+  //   showModal();
+  // } catch (error) {
+  //   showError(error.message);
+  // }
 
-  if (emailExists) {
-    return showError("Email already exists.");
-  }
-
-  if (idExists) {
-    return showError("Employee ID already registered.");
-  }
-
-  // Create new user
-  const newUser = {
-    firstName,
-    lastName,
-    employeeId,
-    email,
-    password,
-    role, // <-- SAVES THE SELECTED ROLE
-    createdAt: new Date().toISOString()
-  };
-
-  existingUsers.push(newUser);
-  saveUsers(existingUsers);
-
-  showModal();
+  showError("⚠️ Please connect to Supabase first");
 });
 
 // Error display

@@ -1,29 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    // Sample default accounts for testing
-    const sampleUsers = [
-        { 
-            id: "hr", 
-            role: "Admin", 
-            password: "hr",
-            email: "hr@rmt.com",
-            firstName: "HR",
-            lastName: "Admin",
-            department: "Human Resources",
-            position: "HR Manager"
-        },
-        { 
-            id: "emp", 
-            role: "Employee", 
-            password: "emp",
-            email: "employee@rmt.com",
-            firstName: "John",
-            lastName: "Doe",
-            department: "Sales",
-            position: "Sales Associate"
-        },
-    ];
-
     // HR/Manager Access PIN (6 digits)
     const ADMIN_PIN = "123456"; // Change this to your desired PIN
 
@@ -36,32 +12,53 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // LOGIN HANDLER
-    loginForm.addEventListener("submit", (e) => {
+    // LOGIN HANDLER - Ready for Supabase
+    loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         const empId = document.getElementById("employeeId").value.trim();
         const pwd = document.getElementById("password").value.trim();
 
-        // Find user in sample list
-        const user = sampleUsers.find(u => u.id === empId);
+        // TODO: Replace with Supabase authentication
+        // Example:
+        // const { data, error } = await supabase.auth.signInWithPassword({
+        //     email: empId + '@rmt.com',
+        //     password: pwd
+        // });
+        //
+        // if (error) {
+        //     errorMessage.textContent = "❌ Invalid Employee ID or Password.";
+        //     errorMessage.style.display = "block";
+        //     return;
+        // }
+        //
+        // // Fetch user profile from employees table
+        // const { data: profile } = await supabase
+        //     .from('employees')
+        //     .select('*, positions(roles(role_name))')
+        //     .eq('id', data.user.id)
+        //     .single();
+        //
+        // // Store session
+        // localStorage.setItem("loggedInUser", JSON.stringify({
+        //     id: profile.id,
+        //     role: profile.positions.roles.role_name,
+        //     email: profile.email,
+        //     firstName: profile.first_name,
+        //     lastName: profile.last_name,
+        //     department: profile.positions.departments.department_name,
+        //     position: profile.positions.position_name
+        // }));
+        //
+        // // Redirect based on role
+        // if (profile.positions.roles.role_name === "Admin") {
+        //     window.location.href = "dashboard.html";
+        // } else {
+        //     window.location.href = "attendance.html";
+        // }
 
-        if (!user || user.password !== pwd) {
-            errorMessage.textContent = "❌ Invalid Employee ID or Password.";
-            errorMessage.style.display = "block";
-            return;
-        }
-
-        // Store login session with complete user data
-        localStorage.setItem("loggedInUser", JSON.stringify(user));
-        localStorage.setItem("userEmail", user.email);
-
-        // Redirect based on role
-        if (user.role === "Admin") {
-            window.location.href = "dashboard.html";
-        } else {
-            window.location.href = "attendance.html";
-        }
+        errorMessage.textContent = "⚠️ Please connect to Supabase first";
+        errorMessage.style.display = "block";
     });
 
     // CREATE ACCOUNT BUTTON - Shows PIN Modal

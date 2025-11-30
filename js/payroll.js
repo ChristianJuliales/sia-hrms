@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processBtn.style.display = "none";
   }
 
-  let payrollRecords = JSON.parse(localStorage.getItem("payrollRecords")) || [];
+  let payrollRecords = [];
   let selectedPeriod = getCurrentPeriod();
 
   // ===================================================
@@ -164,40 +164,70 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===================================================
-  // GET DATA
+  // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
   // ===================================================
-  function getAllEmployees() {
-    return JSON.parse(localStorage.getItem("employees")) || [];
+  async function fetchAllEmployees() {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase.from('employees').select('*');
+    return [];
   }
 
-  function getAttendanceRecords(employeeId, periodStart, periodEnd) {
-    const allAttendance = JSON.parse(localStorage.getItem("attendance_records")) || [];
+  async function fetchAttendanceRecords(employeeId, periodStart, periodEnd) {
+    // TODO: Implement Supabase fetch with filters
+    // const { data, error } = await supabase
+    //   .from('attendance_records')
+    //   .select('*')
+    //   .eq('id', employeeId)
+    //   .gte('date', periodStart)
+    //   .lte('date', periodEnd)
+    //   .neq('timeOut', null);
+    return [];
+  }
+
+  async function fetchProcessedPayroll(employeeId, period) {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase
+    //   .from('payroll_records')
+    //   .select('*')
+    //   .eq('employeeNo', employeeId)
+    //   .eq('period', period)
+    //   .single();
+    return null;
+  }
+
+  async function fetchAllPayrollRecords() {
+    // TODO: Implement Supabase fetch
+    // const { data, error } = await supabase.from('payroll_records').select('*');
+    payrollRecords = [];
+    return payrollRecords;
+  }
+
+  async function savePayrollRecord(record) {
+    // TODO: Implement Supabase insert
+    // const { data, error } = await supabase
+    //   .from('payroll_records')
+    //   .insert([record]);
     
-    return allAttendance.filter(record => {
-      const recordDate = new Date(record.date);
-      const startDate = new Date(periodStart);
-      const endDate = new Date(periodEnd);
-      
-      return record.id === employeeId && 
-             recordDate >= startDate && 
-             recordDate <= endDate &&
-             record.timeOut !== null &&
-             record.timeOut !== "--";
-    });
+    // For now, just add to local array
+    payrollRecords.push(record);
   }
 
-  function getProcessedPayroll(employeeId, period) {
-    return payrollRecords.find(p => 
-      p.employeeNo === employeeId && 
-      p.period === period
-    );
+  async function deletePayrollRecord(id) {
+    // TODO: Implement Supabase delete
+    // const { error } = await supabase
+    //   .from('payroll_records')
+    //   .delete()
+    //   .eq('id', id);
+    
+    // For now, just filter local array
+    payrollRecords = payrollRecords.filter(p => p.id !== id);
   }
 
   // ===================================================
   // CALCULATE PAYROLL FOR EMPLOYEE
   // ===================================================
-  function calculateEmployeePayroll(employee, periodStart, periodEnd) {
-    const attendanceRecords = getAttendanceRecords(employee.empId, periodStart, periodEnd);
+  async function calculateEmployeePayroll(employee, periodStart, periodEnd) {
+    const attendanceRecords = await fetchAttendanceRecords(employee.empId, periodStart, periodEnd);
     const monthlySalary = parseFloat(employee.basicSalary) || parseFloat(employee.monthlySalary) || 17000;
 
     if (attendanceRecords.length === 0) {
@@ -245,8 +275,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================================
   // RENDER TABLE
   // ===================================================
-  function renderEmployeeTable() {
-    const employees = getAllEmployees();
+  async function renderEmployeeTable() {
+    const employees = await fetchAllEmployees();
     
     if (employees.length === 0) {
       tableBody.innerHTML = `<tr><td colspan="9" class="empty">No employees found</td></tr>`;
@@ -255,14 +285,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const periodKey = `${selectedPeriod.start} → ${selectedPeriod.end}`;
+    const rows = [];
 
-    tableBody.innerHTML = employees.map(emp => {
-      const processed = getProcessedPayroll(emp.empId, periodKey);
+    for (const emp of employees) {
+      const processed = await fetchProcessedPayroll(emp.empId, periodKey);
       const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
 
       if (processed) {
         // Already processed - show View/Delete
-        return `
+        rows.push(`
           <tr>
             <td>${emp.empId}</td>
             <td>${fullName}</td>
@@ -279,10 +310,10 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </td>
           </tr>
-        `;
+        `);
       } else {
         // Not processed yet - show Process button
-        return `
+        rows.push(`
           <tr>
             <td>${emp.empId}</td>
             <td>${fullName}</td>
@@ -302,18 +333,19 @@ document.addEventListener("DOMContentLoaded", () => {
               </button>
             </td>
           </tr>
-        `;
+        `);
       }
-    }).join("");
+    }
 
+    tableBody.innerHTML = rows.join("");
     updateSummaryCards();
   }
 
   // ===================================================
   // PROCESS PAYROLL FOR EMPLOYEE
   // ===================================================
-  window.processEmployeePayroll = function(empId) {
-    const employees = getAllEmployees();
+  window.processEmployeePayroll = async function(empId) {
+    const employees = await fetchAllEmployees();
     const employee = employees.find(e => e.empId === empId);
 
     if (!employee) {
@@ -321,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const calculation = calculateEmployeePayroll(employee, selectedPeriod.start, selectedPeriod.end);
+    const calculation = await calculateEmployeePayroll(employee, selectedPeriod.start, selectedPeriod.end);
 
     if (!calculation) {
       alert(`⚠️ No attendance records found for ${employee.firstName} ${employee.lastName} in this period.`);
@@ -368,24 +400,20 @@ document.addEventListener("DOMContentLoaded", () => {
       processedDate: new Date().toLocaleDateString()
     };
 
-    payrollRecords.push(newRecord);
-    localStorage.setItem("payrollRecords", JSON.stringify(payrollRecords));
-
+    await savePayrollRecord(newRecord);
     alert("✅ Payroll processed successfully!");
-    renderEmployeeTable();
+    await renderEmployeeTable();
   };
 
   // ===================================================
   // DELETE PAYROLL
   // ===================================================
-  window.deletePayroll = function(id) {
+  window.deletePayroll = async function(id) {
     if (!confirm("Are you sure you want to delete this payroll record?")) return;
 
-    payrollRecords = payrollRecords.filter(p => p.id !== id);
-    localStorage.setItem("payrollRecords", JSON.stringify(payrollRecords));
-
+    await deletePayrollRecord(id);
     alert("✅ Payroll record deleted!");
-    renderEmployeeTable();
+    await renderEmployeeTable();
   };
 
   // ===================================================
@@ -440,7 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================================
   // SUMMARY CARDS
   // ===================================================
-  function updateSummaryCards() {
+  async function updateSummaryCards() {
     let totalPayroll = 0;
     let totalDeductions = 0;
     let processedCount = 0;
@@ -470,17 +498,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // PERIOD FILTER (Optional Enhancement)
   // ===================================================
   if (periodSelect) {
-    periodSelect.addEventListener("change", (e) => {
+    periodSelect.addEventListener("change", async (e) => {
       if (e.target.value !== "All Periods") {
         // You can add period filtering logic here
-        // For now, it shows current month by default
       }
-      renderEmployeeTable();
+      await renderEmployeeTable();
     });
   }
 
   // ===================================================
   // INITIALIZE
   // ===================================================
-  renderEmployeeTable();
+  (async function init() {
+    await fetchAllPayrollRecords();
+    await renderEmployeeTable();
+  })();
 });

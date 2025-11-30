@@ -1,9 +1,9 @@
-// ==================== TIME TRACKER - CONNECTED TO EMPLOYEE DATA ====================
+// ==================== TIME TRACKER - SUPABASE READY ====================
 
 let currentEmployee = null;
 const ATT_KEY = "attendance_records";
 
-// ==================== GET EMPLOYEES FROM LOCALSTORAGE ====================
+// ==================== GET EMPLOYEES FROM STORAGE ====================
 
 function getEmployeesFromStorage() {
     try {
@@ -13,14 +13,58 @@ function getEmployeesFromStorage() {
     }
 }
 
+// TODO: Replace with Supabase fetch
+// async function getEmployeesFromSupabase() {
+//     const { data, error } = await supabase
+//         .from('employees')
+//         .select(`
+//             employee_id,
+//             first_name,
+//             last_name,
+//             photo_url,
+//             positions(
+//                 position_name,
+//                 departments(department_name)
+//             )
+//         `);
+//
+//     if (error) {
+//         console.error('Error fetching employees:', error);
+//         return [];
+//     }
+//
+//     return data;
+// }
+
 function getEmployeeById(empId) {
     const employees = getEmployeesFromStorage();
-    // Search by empId or firstName + lastName combination
     return employees.find(e => 
         e.empId === empId || 
         e.empId?.toString() === empId?.toString()
     );
 }
+
+// TODO: Replace with Supabase fetch by ID
+// async function getEmployeeByIdFromSupabase(empId) {
+//     const { data, error } = await supabase
+//         .from('employees')
+//         .select(`
+//             *,
+//             positions(
+//                 position_name,
+//                 departments(department_name)
+//             )
+//         `)
+//         .eq('employee_id', empId)
+//         .single();
+//
+//     if (error) {
+//         console.error('Error fetching employee:', error);
+//         return null;
+//     }
+//
+//     return data;
+// }
 
 // ==================== STORAGE FUNCTIONS ====================
 
@@ -41,6 +85,27 @@ function getTodayRecord(empId) {
     const today = new Date().toISOString().split("T")[0];
     return getRecords().find(r => r.id === empId && r.date === today) || null;
 }
+
+// TODO: Replace with Supabase fetch today's attendance
+// async function getTodayRecordFromSupabase(empId) {
+//     const today = new Date().toISOString().split('T')[0];
+//     
+//     const { data, error } = await supabase
+//         .from('attendance')
+//         .select('*')
+//         .eq('employee_id', empId)
+//         .gte('timestamp', `${today}T00:00:00`)
+//         .lte('timestamp', `${today}T23:59:59`)
+//         .is('time_out', null)
+//         .single();
+//
+//     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+//         console.error('Error fetching today record:', error);
+//         return null;
+//     }
+//
+//     return data;
+// }
 
 // ==================== FORMATTING HELPERS ====================
 
@@ -77,27 +142,26 @@ function showClockModal(empId) {
         return;
     }
 
+    // TODO: Use Supabase data
+    // const employee = await getEmployeeByIdFromSupabase(empId);
+
     currentEmployee = employee;
 
-    // Build full name
     const fullName = `${employee.firstName} ${employee.lastName}`;
     const position = employee.position || 'N/A';
     const department = employee.department || 'N/A';
     const photo = employee.photo || createInitialAvatar(employee.firstName, employee.lastName);
 
-    // Update profile section
     document.getElementById('profileImg').src = photo;
     document.getElementById('displayName').textContent = fullName;
     document.getElementById('displayPosition').textContent = position;
     document.getElementById('displayId').textContent = employee.empId;
 
-    // Update details section
     document.getElementById('detailId').textContent = employee.empId;
     document.getElementById('detailName').textContent = fullName;
     document.getElementById('detailPosition').textContent = position;
     document.getElementById('detailDept').textContent = department;
 
-    // Update records display
     const today = getTodayRecord(employee.empId);
     updateRecordsDisplay(today);
 
@@ -112,11 +176,9 @@ function createInitialAvatar(firstName, lastName) {
     canvas.height = 120;
     const ctx = canvas.getContext('2d');
     
-    // Green background
     ctx.fillStyle = '#0f9e5e';
     ctx.fillRect(0, 0, 120, 120);
     
-    // White text
     ctx.fillStyle = 'white';
     ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
@@ -165,7 +227,6 @@ function handleTimeIn() {
     const now = new Date();
     const records = getRecords();
 
-    // Check if already clocked in
     const alreadyLoggedIn = records.some(r =>
         r.id === currentEmployee.empId &&
         r.date === today &&
@@ -177,7 +238,7 @@ function handleTimeIn() {
         return;
     }
 
-    records.push({
+    const newRecord = {
         id: currentEmployee.empId,
         name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
         department: currentEmployee.department,
@@ -185,9 +246,27 @@ function handleTimeIn() {
         date: today,
         timeIn: formatTime(now),
         timeOut: null
-    });
+    };
 
+    records.push(newRecord);
     saveRecords(records);
+
+    // TODO: Insert to Supabase
+    // const { error } = await supabase
+    //     .from('attendance')
+    //     .insert({
+    //         employee_id: currentEmployee.employee_id || currentEmployee.empId,
+    //         timestamp: now.toISOString(),
+    //         time_in: now.toISOString(),
+    //         time_out: null,
+    //         date: today
+    //     });
+    //
+    // if (error) {
+    //     showAlert('Error recording time in: ' + error.message, 'error');
+    //     return;
+    // }
+
     showAlert('✓ Clocked In Successfully!', 'success');
     updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
 }
@@ -217,6 +296,20 @@ function handleTimeOut() {
     if (index !== -1) {
         records[index].timeOut = formatTime(now);
         saveRecords(records);
+
+        // TODO: Update Supabase
+        // const { error } = await supabase
+        //     .from('attendance')
+        //     .update({ time_out: now.toISOString() })
+        //     .eq('employee_id', currentEmployee.employee_id || currentEmployee.empId)
+        //     .is('time_out', null)
+        //     .eq('date', todayRecord.date);
+        //
+        // if (error) {
+        //     showAlert('Error recording time out: ' + error.message, 'error');
+        //     return;
+        // }
+
         showAlert('✓ Clocked Out Successfully!', 'success');
         updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
     } else {
@@ -236,16 +329,13 @@ function startClock() {
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Set current date
     document.getElementById('currentDate').textContent = formatDate();
 
-    // Get DOM elements
     const inputEmpId = document.getElementById("inputEmpId");
     const btnLogin = document.getElementById("btnLogin");
     const btnLogout = document.getElementById("btnLogout");
     const btnClockInOut = document.getElementById("btnClockInOut");
 
-    // Login handler
     btnLogin.addEventListener('click', () => {
         const empId = inputEmpId.value.trim();
         
@@ -261,24 +351,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // TODO: Use Supabase
+        // const employee = await getEmployeeByIdFromSupabase(empId);
+        // if (!employee) {
+        //     showAlert('Employee ID not found in system', 'error', 'alertBox');
+        //     return;
+        // }
+
         showClockModal(empId);
         inputEmpId.value = '';
     });
 
-    // Allow Enter key to login
     inputEmpId.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             btnLogin.click();
         }
     });
 
-    // Logout handler
     btnLogout.addEventListener('click', () => {
         currentEmployee = null;
         showLoginModal();
     });
 
-    // Clock In/Out handler
     btnClockInOut.addEventListener('click', () => {
         if (!currentEmployee) return;
         
@@ -291,9 +385,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Start the clock
     startClock();
-    
-    // Initial state
     showLoginModal();
 });

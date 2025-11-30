@@ -15,22 +15,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ===================================================
-    // GET DATA FROM LOCALSTORAGE
+    // FETCH DATA FROM SUPABASE (TO BE IMPLEMENTED)
     // ===================================================
-    function getEmployees() {
-        return JSON.parse(localStorage.getItem('employees')) || [];
+    async function fetchEmployees() {
+        // TODO: Implement Supabase fetch
+        // const { data, error } = await supabase.from('employees').select('*');
+        return [];
     }
 
-    function getAttendanceRecords() {
-        return JSON.parse(localStorage.getItem('attendance_records')) || [];
+    async function fetchAttendanceRecords() {
+        // TODO: Implement Supabase fetch
+        // const { data, error } = await supabase.from('attendance_records').select('*');
+        return [];
     }
 
-    function getLeaveRequests() {
-        return JSON.parse(localStorage.getItem('leaveRequests')) || [];
+    async function fetchLeaveRequests() {
+        // TODO: Implement Supabase fetch
+        // const { data, error } = await supabase.from('leave_requests').select('*');
+        return [];
     }
 
-    function getPayrollRecords() {
-        return JSON.parse(localStorage.getItem('payrollRecords')) || [];
+    async function fetchPayrollRecords() {
+        // TODO: Implement Supabase fetch
+        // const { data, error } = await supabase.from('payroll_records').select('*');
+        return [];
     }
 
     // ===================================================
@@ -72,9 +80,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // PROCESS ATTENDANCE DATA
     // ===================================================
-    function processAttendanceData() {
-        const employees = getEmployees();
-        const attendance = getAttendanceRecords();
+    async function processAttendanceData() {
+        const employees = await fetchEmployees();
+        const attendance = await fetchAttendanceRecords();
 
         const attendanceByEmployee = {};
 
@@ -125,10 +133,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // SUMMARY TAB - UPDATE KPIs
     // ===================================================
-    function updateSummaryKPIs() {
-        const employees = getEmployees();
-        const payroll = getPayrollRecords();
-        const attendance = getAttendanceRecords();
+    async function updateSummaryKPIs() {
+        const employees = await fetchEmployees();
+        const payroll = await fetchPayrollRecords();
+        const attendance = await fetchAttendanceRecords();
 
         // Total Employees
         const totalEmployees = employees.length;
@@ -169,8 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // SUMMARY TAB - CHARTS
     // ===================================================
-    function initializeCharts() {
-        const employees = getEmployees();
+    async function initializeCharts() {
+        const employees = await fetchEmployees();
         
         // Count employees by department
         const deptCount = {};
@@ -209,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // B. Leave Status Donut Chart
-        const leaves = getLeaveRequests();
+        const leaves = await fetchLeaveRequests();
         const leaveStatusCount = {
             approved: leaves.filter(l => l.status === 'approved').length,
             pending: leaves.filter(l => l.status === 'pending').length,
@@ -240,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // C. Payroll Role Distribution Donut Chart
-        const payroll = getPayrollRecords();
+        const payroll = await fetchPayrollRecords();
         const roleCount = {};
         
         payroll.forEach(p => {
@@ -278,8 +286,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // ATTENDANCE TAB
     // ===================================================
-    function renderAttendanceTable() {
-        const attendanceData = processAttendanceData();
+    async function renderAttendanceTable() {
+        const attendanceData = await processAttendanceData();
         const tbody = document.getElementById("attendanceTable");
         
         let totalPresent = 0, totalLate = 0, totalAbsent = 0;
@@ -321,8 +329,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // LEAVE TAB
     // ===================================================
-    function renderLeaveTable() {
-        const leaves = getLeaveRequests();
+    async function renderLeaveTable() {
+        const leaves = await fetchLeaveRequests();
         const leaveTable = document.getElementById("leaveTable");
         
         leaveTable.innerHTML = '';
@@ -350,8 +358,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // PAYROLL TAB
     // ===================================================
-    function renderPayrollTable() {
-        const payroll = getPayrollRecords();
+    async function renderPayrollTable() {
+        const payroll = await fetchPayrollRecords();
         const payrollTable = document.getElementById("payrollTable");
         
         payrollTable.innerHTML = '';
@@ -375,12 +383,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     // INITIALIZE ALL TABS
     // ===================================================
-    function initializeReports() {
-        updateSummaryKPIs();
-        initializeCharts();
-        renderAttendanceTable();
-        renderLeaveTable();
-        renderPayrollTable();
+    async function initializeReports() {
+        await updateSummaryKPIs();
+        await initializeCharts();
+        await renderAttendanceTable();
+        await renderLeaveTable();
+        await renderPayrollTable();
     }
 
     // ===================================================
@@ -388,18 +396,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     initializeReports();
 
-    // ===================================================
-    // LISTEN FOR DATA UPDATES
-    // ===================================================
-    window.addEventListener('storage', (e) => {
-        if (['employees', 'attendance_records', 'leaveRequests', 'payrollRecords'].includes(e.key)) {
-            initializeReports();
-        }
-    });
-
-    // Refresh every 30 seconds to catch same-tab updates
+    // Refresh every 30 seconds
     setInterval(() => {
         initializeReports();
     }, 30000);
 });
-// TODO: Call Supabase fetch functions on page load // fetchAttendanceData(); // fetchLeaveData(); // fetchPayrollData(); });
