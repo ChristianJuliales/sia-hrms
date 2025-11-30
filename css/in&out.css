@@ -26,6 +26,7 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    overflow-y: auto;
 }
 
 .modal-overlay.show {
@@ -37,10 +38,20 @@ body {
     background: white;
     border-radius: 20px;
     padding: 40px;
-    max-width: 500px;
+    max-width: 600px;
     width: 100%;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     animation: slideIn 0.3s ease-out;
+    position: relative;
+    margin: auto;
+}
+
+.login-container {
+    max-width: 500px;
+}
+
+.clock-container {
+    max-width: 650px;
 }
 
 @keyframes slideIn {
@@ -65,33 +76,31 @@ body {
 /* Logo Container */
 .logo-wrapper {
     display: flex;
-    justify-content: center;  /* centers horizontally */
+    justify-content: center;
     align-items: center;
-    gap: 8px; /* space between logo and RMT */
-    margin-bottom: 10px; /* optional spacing */
+    gap: 12px;
+    margin-bottom: 15px;
 }
 
-/* Logo Image */
 .logo-img {
-    height: 70px;
+    height: 60px;
     width: auto;
     display: block;
 }
 
-/* Logo Text */
 .logo-text {
-    font-size: 50px;
+    font-size: 45px;
     font-weight: bold;
     color: #0e724e;
     letter-spacing: 1px;
 }
 
-.tracker-title{
-    font-size: 18px;
+.tracker-title {
+    font-size: 22px;
     font-weight: bold;
     color: #0e724e;
+    margin-bottom: 5px;
 }
-
 
 .tracker-subtitle {
     font-size: 14px;
@@ -102,7 +111,7 @@ body {
 .time-display {
     background: linear-gradient(135deg, #0f9e5e 0%, #0d8c52 100%);
     border-radius: 15px;
-    padding: 25px;
+    padding: 30px;
     text-align: center;
     margin-bottom: 25px;
     color: white;
@@ -114,19 +123,19 @@ body {
     opacity: 0.9;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .time-display .current-time {
-    font-size: 48px;
+    font-size: 52px;
     font-weight: bold;
     font-family: 'Courier New', monospace;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .time-display .current-date {
-    font-size: 14px;
-    opacity: 0.9;
+    font-size: 15px;
+    opacity: 0.95;
 }
 
 /* Employee Info */
@@ -134,7 +143,7 @@ body {
     background: #f0fdf4;
     border: 2px solid #dcfce7;
     border-radius: 12px;
-    padding: 15px;
+    padding: 20px;
     margin-bottom: 25px;
 }
 
@@ -142,9 +151,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
     font-size: 14px;
-    gap: 10px;
+    gap: 12px;
 }
 
 .info-row:last-child {
@@ -154,13 +163,13 @@ body {
 .info-label {
     color: #6b7280;
     font-weight: 600;
-    min-width: 100px;
+    min-width: 120px;
     flex-shrink: 0;
 }
 
 .info-input {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 2px solid #dcfce7;
     border-radius: 8px;
     font-size: 14px;
@@ -188,44 +197,85 @@ body {
     font-weight: 400;
 }
 
-/* Status Section */
-.status-section {
+/* Employee Profile Section */
+.employee-profile {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.profile-picture {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid #0f9e5e;
+    box-shadow: 0 4px 15px rgba(15, 158, 94, 0.2);
+}
+
+.profile-picture img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.employee-name {
+    font-size: 24px;
+    font-weight: bold;
+    color: #111827;
+    margin-bottom: 5px;
+}
+
+.employee-position {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.employee-id {
+    font-size: 12px;
+    color: #0f9e5e;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Employee Details Section */
+.employee-details {
+    background: #f0fdf4;
+    border: 2px solid #dcfce7;
+    border-radius: 12px;
+    padding: 18px;
     margin-bottom: 25px;
 }
 
-.status-label {
-    font-size: 12px;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-    font-weight: 600;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 10px 16px;
-    border-radius: 8px;
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
     font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    border-bottom: 1px solid #dcfce7;
 }
 
-.status-badge.active {
-    background: #dcfce7;
-    color: #15803d;
-    border: 2px solid #0f9e5e;
+.detail-row:last-child {
+    border-bottom: none;
 }
 
-.status-badge.inactive {
-    background: #f3f4f6;
+.detail-label {
     color: #6b7280;
-    border: 2px solid #d1d5db;
+    font-weight: 600;
+}
+
+.detail-value {
+    color: #0f9e5e;
+    font-weight: 700;
 }
 
 /* Alerts */
 .alert {
-    padding: 12px 16px;
+    padding: 14px 16px;
     border-radius: 10px;
     margin-bottom: 15px;
     font-size: 14px;
@@ -263,7 +313,7 @@ body {
 /* Buttons */
 .button-group {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 12px;
     margin-bottom: 15px;
 }
@@ -288,6 +338,7 @@ body {
     background: #0f9e5e;
     color: white;
     border: 2px solid #0f9e5e;
+    width: 100%;
 }
 
 .btn-login:hover:not(:disabled) {
@@ -305,46 +356,53 @@ body {
     transform: none;
 }
 
-.btn-logout {
-    background: #dc2626;
+.btn-clock {
+    width: 100%;
+    background: #0f9e5e;
     color: white;
-    border: 2px solid #dc2626;
+    border: 2px solid #0f9e5e;
+    padding: 16px !important;
+    font-size: 16px !important;
+    margin-bottom: 20px;
 }
 
-.btn-logout:hover:not(:disabled) {
-    background: #b91c1c;
-    border-color: #b91c1c;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+.btn-clock:hover:not(:disabled) {
+    background: #0d8c52;
+    border-color: #0d8c52;
+    box-shadow: 0 4px 15px rgba(15, 158, 94, 0.3);
     transform: translateY(-2px);
 }
 
-.btn-logout:disabled {
+.btn-clock:disabled {
     background: #d1d5db;
     border-color: #d1d5db;
     color: #9ca3af;
     cursor: not-allowed;
-    transform: none;
 }
 
-.btn-close {
-    width: 100%;
-    background: #f3f4f6;
-    color: #374151;
-    border: 2px solid #d1d5db;
-    margin-top: 15px;
+/* Logout Button */
+.logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #dc2626 !important;
+    color: white !important;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+    width: auto !important;
 }
 
-.btn-close:hover {
-    background: #e5e7eb;
-    border-color: #9ca3af;
-    transform: translateY(-2px);
+.logout-btn:hover {
+    background: #b91c1c !important;
+    transform: translateY(-2px) !important;
 }
 
 /* Time Records */
 .records-section {
-    margin-top: 20px;
+    margin-top: 25px;
     padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 2px solid #e5e7eb;
 }
 
 .records-title {
@@ -353,42 +411,62 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.records-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
 }
 
 .time-record {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    padding: 10px 12px;
-    background: #f9fafb;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    font-size: 13px;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 12px;
+    font-size: 14px;
     animation: slideIn 0.3s ease-out;
+    border: 2px solid;
 }
 
 .time-record.in {
-    border-left: 4px solid #0f9e5e;
+    border-color: #dcfce7;
+    background: #f0fdf4;
 }
 
 .time-record.out {
-    border-left: 4px solid #dc2626;
+    border-color: #fee2e2;
+    background: #fef2f2;
 }
 
 .record-label {
-    color: #6b7280;
+    font-size: 12px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.time-record.in .record-label {
+    color: #0f9e5e;
+}
+
+.time-record.out .record-label {
+    color: #dc2626;
 }
 
 .record-time {
     color: #111827;
     font-weight: 700;
     font-family: 'Courier New', monospace;
+    font-size: 18px;
 }
 
 .icon {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 /* Responsive Design */
@@ -397,45 +475,35 @@ body {
         padding: 25px;
     }
 
-    .tracker-logo {
+    .logo-text {
         font-size: 36px;
     }
 
     .tracker-title {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .time-display .current-time {
         font-size: 36px;
     }
 
-    .button-group {
+    .profile-picture {
+        width: 100px;
+        height: 100px;
+    }
+
+    .employee-name {
+        font-size: 20px;
+    }
+
+    .records-grid {
         grid-template-columns: 1fr;
     }
 
-    .modal-overlay {
-        padding: 10px;
+    .logout-btn {
+        padding: 8px 12px !important;
+        font-size: 10px !important;
     }
-    
-    .info-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-    
-    .info-label {
-        min-width: auto;
-    }
-    
-    .info-input {
-        width: 100%;
-    }
-}
-
-/* Loading State */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
 }
 
 /* Smooth transitions */

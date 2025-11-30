@@ -1,8 +1,29 @@
-// ==================== CLEANED TIME TRACKER LOGIC ====================
+// ==================== TIME TRACKER - CONNECTED TO EMPLOYEE DATA ====================
 
+let currentEmployee = null;
 const ATT_KEY = "attendance_records";
 
-// Get all attendance records
+// ==================== GET EMPLOYEES FROM LOCALSTORAGE ====================
+
+function getEmployeesFromStorage() {
+    try {
+        return JSON.parse(localStorage.getItem('employees')) || [];
+    } catch {
+        return [];
+    }
+}
+
+function getEmployeeById(empId) {
+    const employees = getEmployeesFromStorage();
+    // Search by empId or firstName + lastName combination
+    return employees.find(e => 
+        e.empId === empId || 
+        e.empId?.toString() === empId?.toString()
+    );
+}
+
+// ==================== STORAGE FUNCTIONS ====================
+
 function getRecords() {
     try {
         return JSON.parse(localStorage.getItem(ATT_KEY)) || [];
@@ -15,14 +36,14 @@ function saveRecords(records) {
     localStorage.setItem(ATT_KEY, JSON.stringify(records));
 }
 
-// Get today's record for employee
 function getTodayRecord(empId) {
     if (!empId) return null;
     const today = new Date().toISOString().split("T")[0];
     return getRecords().find(r => r.id === empId && r.date === today) || null;
 }
 
-// Formatting helpers
+// ==================== FORMATTING HELPERS ====================
+
 function formatTime(date = new Date()) {
     return date.toLocaleTimeString("en-US", {
         hour: "2-digit",
@@ -41,149 +62,154 @@ function formatDate(date = new Date()) {
     });
 }
 
-// Check if all fields filled
-function allFieldsFilled() {
-    return ["inputEmpId", "inputName", "inputDepartment", "inputPosition"]
-        .every(id => document.getElementById(id).value.trim() !== "");
+// ==================== MODAL MANAGEMENT ====================
+
+function showLoginModal() {
+    document.getElementById('loginModal').classList.add('show');
+    document.getElementById('clockModal').classList.remove('show');
 }
 
-// Update button state
-function updateButtonState() {
-    const empId = document.getElementById("inputEmpId").value.trim();
-    const today = getTodayRecord(empId);
-    const btnIn = document.getElementById("btnTimeIn");
-    const btnOut = document.getElementById("btnTimeOut");
-    const status = document.querySelector(".status-badge") || document.createElement('div');
-
-    const checkedIn = today && today.timeOut === null;
-
-    if (btnIn) btnIn.disabled = !allFieldsFilled() || checkedIn;
-    if (btnOut) btnOut.disabled = !allFieldsFilled() || !checkedIn;
-
-    // If there is a status-badge in DOM update it (in your HTML it's present in render HTML, but we keep safe guard)
-    if (document.querySelector('.status-badge')) {
-        const statusBadge = document.querySelector('.status-badge');
-        if (checkedIn) {
-            statusBadge.className = 'status-badge active';
-            statusBadge.textContent = '● Clocked In';
-        } else {
-            statusBadge.className = 'status-badge inactive';
-            statusBadge.textContent = '○ Clocked Out';
-        }
-    }
-}
-
-// Auto-fill based on Employee ID
-function autoFillFields() {
-    const empId = document.getElementById("inputEmpId").value.trim();
-    const name = document.getElementById("inputName");
-    const dept = document.getElementById("inputDepartment");
-    const pos = document.getElementById("inputPosition");
-
-    if (!empId) return updateButtonState();
-
-    const today = getTodayRecord(empId);
-    const previous = getRecords().slice().reverse().find(r => r.id === empId);
-
-    // Use today’s record > previous record
-    const data = today || previous;
-
-    if (data) {
-        name.value = data.name || "";
-        dept.value = data.department || "";
-        pos.value = data.position || "";
-    }
-
-    const locked = today && today.timeOut === null;
-    [name, dept, pos, document.getElementById("inputEmpId")]
-        .forEach(el => el.disabled = locked);
-
-    updateButtonState();
-}
-
-// Alerts
-function showAlert(message, type = 'success') {
-    const alertBox = document.getElementById('alertBox');
-    if (!alertBox) {
-        alert(message);
+function showClockModal(empId) {
+    const employee = getEmployeeById(empId);
+    
+    if (!employee) {
+        showAlert('Employee ID not found', 'error', 'alertBox');
         return;
     }
+
+    currentEmployee = employee;
+
+    // Build full name
+    const fullName = `${employee.firstName} ${employee.lastName}`;
+    const position = employee.position || 'N/A';
+    const department = employee.department || 'N/A';
+    const photo = employee.photo || createInitialAvatar(employee.firstName, employee.lastName);
+
+    // Update profile section
+    document.getElementById('profileImg').src = photo;
+    document.getElementById('displayName').textContent = fullName;
+    document.getElementById('displayPosition').textContent = position;
+    document.getElementById('displayId').textContent = employee.empId;
+
+    // Update details section
+    document.getElementById('detailId').textContent = employee.empId;
+    document.getElementById('detailName').textContent = fullName;
+    document.getElementById('detailPosition').textContent = position;
+    document.getElementById('detailDept').textContent = department;
+
+    // Update records display
+    const today = getTodayRecord(employee.empId);
+    updateRecordsDisplay(today);
+
+    document.getElementById('loginModal').classList.remove('show');
+    document.getElementById('clockModal').classList.add('show');
+}
+
+function createInitialAvatar(firstName, lastName) {
+    const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 120;
+    const ctx = canvas.getContext('2d');
+    
+    // Green background
+    ctx.fillStyle = '#0f9e5e';
+    ctx.fillRect(0, 0, 120, 120);
+    
+    // White text
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials, 60, 60);
+    
+    return canvas.toDataURL();
+}
+
+// ==================== UI UPDATES ====================
+
+function updateRecordsDisplay(today) {
+    const timeInDisplay = document.getElementById("timeInDisplay");
+    const timeOutDisplay = document.getElementById("timeOutDisplay");
+
+    if (today && today.timeIn) {
+        timeInDisplay.textContent = today.timeIn;
+    } else {
+        timeInDisplay.textContent = "--:--:--";
+    }
+
+    if (today && today.timeOut) {
+        timeOutDisplay.textContent = today.timeOut;
+    } else {
+        timeOutDisplay.textContent = "--:--:--";
+    }
+}
+
+function showAlert(message, type = 'success', alertId = 'alertBox2') {
+    const alertBox = document.getElementById(alertId);
+    if (!alertBox) return;
     alertBox.textContent = message;
     alertBox.className = `alert show ${type}`;
     setTimeout(() => alertBox.classList.remove('show'), 3000);
 }
 
-// Get current employee data from inputs
-function getCurrentEmployeeData() {
-    return {
-        id: document.getElementById('inputEmpId').value.trim(),
-        name: document.getElementById('inputName').value.trim(),
-        department: document.getElementById('inputDepartment').value.trim(),
-        position: document.getElementById('inputPosition').value.trim()
-    };
-}
+// ==================== TIME IN/OUT HANDLERS ====================
 
-// Time In
 function handleTimeIn() {
-    const employee = getCurrentEmployeeData();
-    if (!employee.id || !employee.name) {
-        showAlert('Please fill required fields', 'error');
+    if (!currentEmployee) {
+        showAlert('No employee logged in', 'error');
         return;
     }
+
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
     const records = getRecords();
 
-    // Prevent duplicate login for same employee on same date
+    // Check if already clocked in
     const alreadyLoggedIn = records.some(r =>
-        r.id === employee.id &&
+        r.id === currentEmployee.empId &&
         r.date === today &&
         r.timeOut === null
     );
 
     if (alreadyLoggedIn) {
-        showAlert('This employee already timed in and didn\'t time out yet.', 'warning');
+        showAlert('Already clocked in today!', 'warning');
         return;
     }
 
     records.push({
-        id: employee.id,
-        name: employee.name,
-        department: employee.department,
-        position: employee.position,
+        id: currentEmployee.empId,
+        name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
+        department: currentEmployee.department,
+        position: currentEmployee.position,
         date: today,
         timeIn: formatTime(now),
-        timeOut: null // store as null initially
+        timeOut: null
     });
 
     saveRecords(records);
-
-    // Optionally store minimal last-known user (not used by attendance page)
-    localStorage.setItem('loggedInUser', JSON.stringify(employee));
-
-    showAlert('Time In recorded successfully! Refreshing...', 'success');
-
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
+    showAlert('✓ Clocked In Successfully!', 'success');
+    updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
 }
 
-// Time Out
 function handleTimeOut() {
-    const employee = getCurrentEmployeeData();
-    const todayRecord = getTodayRecord(employee.id);
+    if (!currentEmployee) {
+        showAlert('No employee logged in', 'error');
+        return;
+    }
+
+    const todayRecord = getTodayRecord(currentEmployee.empId);
 
     if (!todayRecord || todayRecord.timeOut !== null) {
-        showAlert('You need to Time In first!', 'error');
+        showAlert('You need to clock in first!', 'error');
         return;
     }
 
     const now = new Date();
     const records = getRecords();
 
-    // find index of active record (timeOut === null)
     const index = records.findIndex(r =>
-        r.id === employee.id &&
+        r.id === currentEmployee.empId &&
         r.date === todayRecord.date &&
         r.timeOut === null
     );
@@ -191,154 +217,83 @@ function handleTimeOut() {
     if (index !== -1) {
         records[index].timeOut = formatTime(now);
         saveRecords(records);
-
-        // Clear logged in user data (optional)
-        localStorage.setItem('loggedInUser', JSON.stringify({}));
-
-        showAlert('Time Out recorded successfully! Refreshing...', 'success');
-
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
+        showAlert('✓ Clocked Out Successfully!', 'success');
+        updateRecordsDisplay(getTodayRecord(currentEmployee.empId));
     } else {
-        showAlert('No active Time In found for that ID', 'error');
+        showAlert('Error recording time out', 'error');
     }
 }
 
-// Live Clock
+// ==================== CLOCK ====================
+
 function startClock() {
+    document.getElementById('currentTime').textContent = formatTime();
     setInterval(() => {
-        const el = document.getElementById('currentTime');
-        if (el) el.textContent = formatTime();
+        document.getElementById('currentTime').textContent = formatTime();
     }, 1000);
 }
 
-// INIT
+// ==================== INITIALIZATION ====================
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Set current date
     document.getElementById('currentDate').textContent = formatDate();
 
+    // Get DOM elements
     const inputEmpId = document.getElementById("inputEmpId");
-    const inputName = document.getElementById("inputName");
-    const inputDepartment = document.getElementById("inputDepartment");
-    const inputPosition = document.getElementById("inputPosition");
-    const btnTimeIn = document.getElementById("btnTimeIn");
-    const btnTimeOut = document.getElementById("btnTimeOut");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnLogout = document.getElementById("btnLogout");
+    const btnClockInOut = document.getElementById("btnClockInOut");
 
-    // Attach listeners
-    if (inputEmpId) inputEmpId.addEventListener('input', autoFillFields);
-    [inputName, inputDepartment, inputPosition].forEach(input => {
-        if (input) input.addEventListener('input', updateButtonState);
+    // Login handler
+    btnLogin.addEventListener('click', () => {
+        const empId = inputEmpId.value.trim();
+        
+        if (!empId) {
+            showAlert('Please enter Employee ID', 'error', 'alertBox');
+            return;
+        }
+
+        const employee = getEmployeeById(empId);
+        
+        if (!employee) {
+            showAlert('Employee ID not found in system', 'error', 'alertBox');
+            return;
+        }
+
+        showClockModal(empId);
+        inputEmpId.value = '';
     });
 
-    if (btnTimeIn) btnTimeIn.addEventListener('click', handleTimeIn);
-    if (btnTimeOut) btnTimeOut.addEventListener('click', handleTimeOut);
+    // Allow Enter key to login
+    inputEmpId.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            btnLogin.click();
+        }
+    });
 
+    // Logout handler
+    btnLogout.addEventListener('click', () => {
+        currentEmployee = null;
+        showLoginModal();
+    });
+
+    // Clock In/Out handler
+    btnClockInOut.addEventListener('click', () => {
+        if (!currentEmployee) return;
+        
+        const today = getTodayRecord(currentEmployee.empId);
+        
+        if (!today || today.timeOut !== null) {
+            handleTimeIn();
+        } else {
+            handleTimeOut();
+        }
+    });
+
+    // Start the clock
     startClock();
-    updateButtonState();
+    
+    // Initial state
+    showLoginModal();
 });
-
-// Load attendance from localStorage
-function loadAttendance() {
-    return JSON.parse(localStorage.getItem("attendance")) || [];
-}
-
-function saveAttendance(data) {
-    localStorage.setItem("attendance", JSON.stringify(data));
-}
-
-// Format date / time
-function getCurrentTime() {
-    return new Date().toLocaleTimeString("en-US", { hour12: true });
-}
-
-function getCurrentDate() {
-    return new Date().toLocaleDateString("en-US");
-}
-
-// Validate fields first
-function validateInputs() {
-    if (!empId.value || !empName.value || !empDept.value || !empPos.value) {
-        showAlert("error", "Please complete all fields.");
-        return false;
-    }
-    return true;
-}
-
-/* ===============================
-   TIME IN
-================================ */
-btnIn.addEventListener("click", () => {
-
-    if (!validateInputs()) return;
-
-    let data = loadAttendance();
-    let date = getCurrentDate();
-
-    // Check if there's already a Time In for this ID today
-    let existing = data.find(
-        r => r.id === empId.value && r.date === date
-    );
-
-    if (existing && existing.timeIn !== null) {
-        showAlert("warning", "You already have TIME IN today. Use TIME OUT.");
-        return;
-    }
-
-    if (!existing) {
-        // Create new record
-        data.push({
-            id: empId.value,
-            name: empName.value,
-            department: empDept.value,
-            position: empPos.value,
-            date: date,
-            timeIn: getCurrentTime(),
-            timeOut: null,
-            totalHours: ""
-        });
-    } else {
-        existing.timeIn = getCurrentTime();
-    }
-
-    saveAttendance(data);
-    showAlert("success", "TIME IN recorded successfully!");
-});
-
-
-/* ===============================
-   TIME OUT
-================================ */
-btnOut.addEventListener("click", () => {
-
-    if (!validateInputs()) return;
-
-    let data = loadAttendance();
-    let date = getCurrentDate();
-
-    let record = data.find(
-        r => r.id === empId.value && r.date === date
-    );
-
-    if (!record) {
-        showAlert("error", "No TIME IN found. Please TIME IN first.");
-        return;
-    }
-
-    if (record.timeOut !== null) {
-        showAlert("warning", "You already have TIME OUT today.");
-        return;
-    }
-
-    record.timeOut = getCurrentTime();
-
-    // Calculate hours
-    let tIn = new Date(`${record.date} ${record.timeIn}`);
-    let tOut = new Date(`${record.date} ${record.timeOut}`);
-
-    let diff = (tOut - tIn) / 3600000;
-    record.totalHours = diff.toFixed(2) + " hrs";
-
-    saveAttendance(data);
-    showAlert("success", "TIME OUT recorded successfully!");
-});
-
