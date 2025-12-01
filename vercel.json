@@ -4,11 +4,17 @@
       "source": "/", 
       "destination": "/html/index.html" 
     },
-    { 
-      "source": "/(.*)", 
-      "destination": "/$1" 
+    {
+      "source": "/css/(.*)",
+      "destination": "/css/$1"
+    },
+    {
+      "source": "/js/(.*)",
+      "destination": "/js/$1"
+    },
+    {
+      "source": "/images/(.*)",
+      "destination": "/images/$1"
     }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  ]
 }
