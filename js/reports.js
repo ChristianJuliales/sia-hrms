@@ -1,5 +1,51 @@
 document.addEventListener("DOMContentLoaded", () => {
+    if (!window.supabaseClient) {
+        console.error("❌ Supabase client not found. Load supabase-config.js first.");
+        return;
+    }
+// ... rest of the code
     const supabase = window.supabaseClient;
+
+    // ===================================================
+    // DISPLAY LOGGED IN USER (FIXED: Using LocalStorage)
+    // ===================================================
+    const welcomeText = document.getElementById('welcomeText');
+    const userEmailDisplay = document.getElementById('userEmailDisplay');
+    
+    function displayLoggedInUser() {
+        const loggedInUserString = localStorage.getItem('loggedInUser');
+        
+        if (loggedInUserString) {
+            try {
+                const loggedInUser = JSON.parse(loggedInUserString);
+                
+                // Prioritize first_name, then email, then username.
+                const displayName = loggedInUser.first_name 
+                                    || loggedInUser.email 
+                                    || loggedInUser.username 
+                                    || 'User';
+                
+                if (welcomeText) {
+                    welcomeText.textContent = `Welcome, ${displayName}`;
+                }
+                if (userEmailDisplay) {
+                    userEmailDisplay.textContent = displayName;
+                }
+                
+                console.log("👤 Logged in user from localStorage:", loggedInUser);
+            } catch (e) {
+                console.error("Error parsing logged in user from localStorage:", e);
+                if (welcomeText) welcomeText.textContent = "Welcome, User (Parse Error)";
+            }
+        } else {
+            console.warn("⚠️ No logged in user found in localStorage");
+            if (welcomeText) welcomeText.textContent = "Welcome, Guest";
+            if (userEmailDisplay) userEmailDisplay.textContent = "Guest";
+        }
+    }
+    
+    // EXECUTE THE USER DISPLAY FUNCTION IMMEDIATELY
+    displayLoggedInUser();
 
     // ===================================================
     // TAB SWITCHING
@@ -32,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchAttendanceRecords() {
         try {
-            const { data, error } = await supabase.from('attendance_records').select('*');
+            const { data, error } = await supabase.from('attendance').select('*');
             if (error) throw error;
             return data || [];
         } catch (error) {
@@ -54,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchPayrollRecords() {
         try {
-            const { data, error } = await supabase.from('payroll_records').select('*');
+            const { data, error } = await supabase.from('payroll').select('*');
             if (error) throw error;
             return data || [];
         } catch (error) {

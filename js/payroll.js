@@ -10,6 +10,32 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const supabase = window.supabaseClient;
 
+    const welcomeText = document.getElementById('welcomeText');
+  const userEmailDisplay = document.getElementById('userEmailDisplay');
+  
+  const loggedInUserString = localStorage.getItem('loggedInUser');
+  if (loggedInUserString) {
+    try {
+      const loggedInUser = JSON.parse(loggedInUserString);
+      const displayName = loggedInUser.email || loggedInUser.first_name || loggedInUser.username || 'User';
+      
+      if (welcomeText) {
+        welcomeText.textContent = `Welcome, ${displayName}`;
+      }
+      if (userEmailDisplay) {
+        userEmailDisplay.textContent = displayName;
+      }
+      
+      console.log("👤 Logged in user:", loggedInUser);
+    } catch (e) {
+      console.error("Error parsing logged in user:", e);
+      if (welcomeText) welcomeText.textContent = "Welcome, User";
+    }
+  } else {
+    console.warn("⚠️ No logged in user found in localStorage");
+    if (welcomeText) welcomeText.textContent = "Welcome, Guest";
+  }
+
   // ==================== UI ELEMENTS ====================
   const periodSelect = document.getElementById("periodSelect");
   const tableBody = document.querySelector(".payroll-table tbody");
