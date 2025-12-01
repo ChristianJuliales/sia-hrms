@@ -325,22 +325,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================================
   // APPROVE / REJECT HANDLERS
   // ===================================================
-  leaveList.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('btn-approve')) {
-      const id = parseInt(e.target.dataset.id);
-      const days = parseInt(e.target.dataset.days);
-      const empId = e.target.dataset.emp;
-      await handleDecision(id, 'Approved', days, empId);
-    } else if (e.target.classList.contains('btn-reject')) {
-      const id = parseInt(e.target.dataset.id);
-      await handleDecision(id, 'Rejected');
-    }
-  });
+  // leaveList.addEventListener (Around lines 305-314)
 
-  async function handleDecision(id, decision, days = 0, empId = null) {
-    if (decision === 'Approved') {
-      if (!confirm(`Approve this leave request for ${days} day(s)?`)) return;
-      
+leaveList.addEventListener('click', async (e) => {
+  if (e.target.classList.contains('btn-approve')) {
+    const id = e.target.dataset.id;
+    const days = parseInt(e.target.dataset.days);
+    const empId = e.target.dataset.emp;
+    await handleDecision(id, 'Approved', days, empId);
+  } else if (e.target.classList.contains('btn-reject')) {
+    const id = e.target.dataset.id;
+    // FIX: Explicitly pass 0 for days and null for empId 
+    await handleDecision(id, 'Rejected', 0, null); 
+  }
+});
+
+async function handleDecision(id, decision, days = 0, empId = null) {
+  if (decision === 'Approved') {
+    if (!confirm(`Approve this leave request for ${days} day(s)?`)) return; // <-- ERROR LINE 332
+
       const currentBalance = await fetchLeaveBalance(empId);
       
       if (currentBalance < days) {
