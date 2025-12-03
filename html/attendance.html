@@ -20,25 +20,14 @@
         const userRole = loggedInUser.role;
         const userPosition = loggedInUser.position || '';
         
-        // Define restricted positions
         const restrictedPositions = ['Employee', 'Driver', 'Dispatcher', 'employee', 'driver', 'dispatcher'];
         const isRestricted = restrictedPositions.some(p => p.toLowerCase() === userPosition.toLowerCase());
 
-        console.log('🔍 Access Control Check:');
-        console.log('   - Role:', userRole);
-        console.log('   - Position:', userPosition);
-        console.log('   - Is Restricted:', isRestricted);
-        console.log('   - Current Page:', currentPage);
-
-        // Redirect restricted users trying to access HR-only pages
         if (isRestricted && hrOnlyPages.includes(currentPage)) {
-            console.log('🚫 Restricted user attempting to access HR page. Redirecting...');
             window.location.href = "attendance.html";
         }
         
-        // Also handle Employee role separately
         if (userRole === "Employee" && hrOnlyPages.includes(currentPage)) {
-            console.log('🚫 Employee role attempting to access HR page. Redirecting...');
             window.location.href = "attendance.html";
         }
     }
@@ -52,7 +41,7 @@
   </head>
   <body>
     <div class="container">
-      <!-- Animated Sidebar -->
+      <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-header">
           <div class="logo-box">
@@ -136,12 +125,13 @@
       </main>
     </div>
 
-<script>
+
+
+    <script>
     document.addEventListener("DOMContentLoaded", () => {
         const sidebar = document.querySelector(".sidebar");
         const welcomeText = document.getElementById('welcomeText');
         
-        // --- User Data Initialization ---
         const loggedInUserString = localStorage.getItem('loggedInUser');
         let loggedInUser = null; 
         let userRole = 'HR';
@@ -162,16 +152,13 @@
             }
         }
 
-        // Check if user has restricted access
         const restrictedPositions = ['Employee', 'Driver', 'Dispatcher', 'employee', 'driver', 'dispatcher'];
         const isRestricted = restrictedPositions.some(p => p.toLowerCase() === userPosition.toLowerCase());
 
-        // 1. Set Welcome Text
         if (welcomeText) {
             welcomeText.textContent = `Welcome, ${userName}.`;
         }
 
-        // 2. Sidebar Hiding Logic (for restricted users)
         if (userRole === "Employee" || isRestricted) {
             const navLinksToHide = [
                 'navDashboard', 'navEmployees', 'navLeaveRequest', 
@@ -186,7 +173,6 @@
             });
         }
         
-        // 3. --- Sidebar Animation Logic ---
         if (!document.querySelector(".hamburger-btn")) {
              const hamburger = document.createElement("button");
              hamburger.className = "hamburger-btn";
@@ -217,7 +203,6 @@
             }
         });
         
-        // 4. Set Active Link and Format Nav Items
         const navItems = document.querySelectorAll(".nav-item");
         const currentPage = window.location.pathname.split("/").pop();
         
@@ -232,7 +217,6 @@
             item.innerHTML = `<span class="nav-item-icon">${icon}</span><span class="nav-item-text">${label}</span>`;
         });
 
-        // 5. --- User Dropdown Menu Logic ---
         const userIcon = document.getElementById("userIcon");
         const dropdownMenu = document.getElementById("dropdownMenu");
         const logoutBtn = document.getElementById("logoutBtn");
@@ -258,7 +242,7 @@
             window.location.href = "index.html";
         });
     });
-</script>
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/supabase-config.js"></script>
