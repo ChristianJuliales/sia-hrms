@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function fetchAttendanceRecords() {
         try {
-            const { data, error } = await supabase.from('attendance_records').select('*');
+            const { data, error } = await supabase.from('attendance').select('*');
             if (error) throw error;
             return data || [];
         } catch (error) {
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function fetchPayrollRecords() {
         try {
-            const { data, error } = await supabase.from('payroll_records').select('*');
+            const { data, error } = await supabase.from('payroll').select('*');
             if (error) throw error;
             return data || [];
         } catch (error) {
@@ -287,11 +287,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     supabase
         .channel('dashboard-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, updateDashboardStats)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, updateDashboardStats)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, updateDashboardStats)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
             updateDashboardStats();
             updateLeaveRequests();
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_records' }, updateDashboardStats)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll' }, updateDashboardStats)
         .subscribe();
 });

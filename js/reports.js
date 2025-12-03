@@ -1,29 +1,31 @@
 document.addEventListener("DOMContentLoaded", () => {
-    if (!window.supabaseClient) {
-        console.error("❌ Supabase client not found. Load supabase-config.js first.");
-        return;
-    }
-// ... rest of the code
+    if (!window.supabaseClient) {
+        console.error("❌ Supabase client not found. Load supabase-config.js first.");
+        return;
+    }
     const supabase = window.supabaseClient;
+
+    // Global variable to store the employee map for lookups
+    let employeeNameMap = {};
 
     // ===================================================
     // DISPLAY LOGGED IN USER (FIXED: Using LocalStorage)
     // ===================================================
     const welcomeText = document.getElementById('welcomeText');
     const userEmailDisplay = document.getElementById('userEmailDisplay');
-    
+
     function displayLoggedInUser() {
         const loggedInUserString = localStorage.getItem('loggedInUser');
-        
+
         if (loggedInUserString) {
             try {
                 const loggedInUser = JSON.parse(loggedInUserString);
                 
-                // Prioritize first_name, then email, then username.
+                // Prioritize name fields, finally falling back to 'User'
                 const displayName = loggedInUser.first_name 
                                     || loggedInUser.email 
                                     || loggedInUser.username 
-                                    || 'User';
+                                    || 'User'; 
                 
                 if (welcomeText) {
                     welcomeText.textContent = `Welcome, ${displayName}`;
@@ -36,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (e) {
                 console.error("Error parsing logged in user from localStorage:", e);
                 if (welcomeText) welcomeText.textContent = "Welcome, User (Parse Error)";
+                if (userEmailDisplay) userEmailDisplay.textContent = "User (Error)";
             }
         } else {
             console.warn("⚠️ No logged in user found in localStorage");
@@ -44,7 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // EXECUTE THE USER DISPLAY FUNCTION IMMEDIATELY
     displayLoggedInUser();
 
     // ===================================================
@@ -63,26 +65,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ===================================================
-    // FETCH DATA FROM SUPABASE
+    // FETCH DATA FROM SUPABASE (WITH DEBUGGING)
     // ===================================================
     async function fetchEmployees() {
         try {
             const { data, error } = await supabase.from('employees').select('*');
             if (error) throw error;
+            console.log("🟢 Employees Fetched:", data.length);
             return data || [];
         } catch (error) {
-            console.error('Error fetching employees:', error);
+            console.error('🔴 Error fetching employees:', error);
             return [];
         }
     }
 
     async function fetchAttendanceRecords() {
         try {
+            // FIX: Changed table name to 'Attendance'
             const { data, error } = await supabase.from('attendance').select('*');
             if (error) throw error;
+            console.log("🟢 Attendance Fetched:", data.length);
             return data || [];
         } catch (error) {
-            console.error('Error fetching attendance:', error);
+            console.error('🔴 Error fetching attendance:', error);
             return [];
         }
     }
@@ -91,20 +96,23 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const { data, error } = await supabase.from('leave_requests').select('*');
             if (error) throw error;
+            console.log("🟢 Leave Requests Fetched:", data.length);
             return data || [];
         } catch (error) {
-            console.error('Error fetching leave requests:', error);
+            console.error('🔴 Error fetching leave requests:', error);
             return [];
         }
     }
 
     async function fetchPayrollRecords() {
         try {
+            // FIX: Changed table name to 'Payroll'
             const { data, error } = await supabase.from('payroll').select('*');
             if (error) throw error;
+            console.log("🟢 Payroll Records Fetched:", data.length);
             return data || [];
         } catch (error) {
-            console.error('Error fetching payroll:', error);
+            console.error('🔴 Error fetching payroll:', error);
             return [];
         }
     }
@@ -149,14 +157,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // PROCESS ATTENDANCE DATA
     // ===================================================
     async function processAttendanceData() {
-        const employees = await fetchEmployees();
         const attendance = await fetchAttendanceRecords();
-
         const attendanceByEmployee = {};
 
-        employees.forEach(emp => {
-            attendanceByEmployee[emp.empId] = {
-                name: `${emp.firstName} ${emp.lastName}`,
+        // Iterate through the already established employeeNameMap
+        Object.keys(employeeNameMap).forEach(employee_id => {
+            attendanceByEmployee[employee_id] = { 
+                name: employeeNameMap[employee_id], // Use resolved name from map
                 present: 0,
                 late: 0,
                 absent: 0,
@@ -165,8 +172,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         attendance.forEach(record => {
-            if (attendanceByEmployee[record.id]) {
-                const empData = attendanceByEmployee[record.id];
+            if (attendanceByEmployee[record.employee_id]) { 
+                const empData = attendanceByEmployee[record.employee_id];
                 
                 if (record.timeOut && record.timeOut !== "--") {
                     empData.present++;
@@ -178,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const nineAM = parseTimeToSeconds("09:00:00 AM");
                     const actualTime = parseTimeToSeconds(record.timeIn);
                     
-                    if (actualTime && actualTime > nineAM) {
+                    if (actualTime && nineAM && actualTime > nineAM) {
                         empData.late++;
                     }
                 }
@@ -203,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================================
     async function updateSummaryKPIs() {
         const employees = await fetchEmployees();
-        const payroll = await fetchPayrollRecords();
+        const payroll = await fetchPayrollRecords() || []; // Safely default to array
         const attendance = await fetchAttendanceRecords();
 
         // Total Employees
@@ -230,10 +237,15 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelector("#attendanceRateCard .number").textContent = attendanceRate + "%";
 
         // Total Payroll
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const currentMonthPayroll = payroll.filter(p => p.period.includes(currentMonth));
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
         
-        const totalPayrollAmount = currentMonthPayroll.reduce((sum, p) => sum + (p.grossPay || 0), 0);
+        // FIX: Use 'payment_date' and add null check to prevent TypeError (reading 'includes')
+        const currentMonthPayroll = payroll.filter(p => 
+            p.payment_date && p.payment_date.includes(currentMonth) 
+        );
+        
+        // FIX: Use 'net_pay' for total payroll since 'grossPay' doesn't exist
+        const totalPayrollAmount = currentMonthPayroll.reduce((sum, p) => sum + (p.net_pay || 0), 0);
         const processedCount = currentMonthPayroll.length;
 
         document.querySelector("#totalPayrollCard .number").textContent = 
@@ -287,9 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // B. Leave Status Donut Chart
         const leaves = await fetchLeaveRequests();
         const leaveStatusCount = {
-            approved: leaves.filter(l => l.status === 'approved').length,
-            pending: leaves.filter(l => l.status === 'pending').length,
-            rejected: leaves.filter(l => l.status === 'rejected').length
+            approved: leaves.filter(l => l.status === 'Approved').length,
+            pending: leaves.filter(l => l.status === 'Pending').length,
+            rejected: leaves.filter(l => l.status === 'Rejected').length
         };
 
         const leaveCtx = document.getElementById('leaveStatusChart')?.getContext('2d');
@@ -316,11 +328,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // C. Payroll Role Distribution Donut Chart
-        const payroll = await fetchPayrollRecords();
+        const payroll = await fetchPayrollRecords() || []; // Safely default to array
         const roleCount = {};
         
+        // Assuming employeePosition is available on the payroll record, otherwise needs join/lookup
         payroll.forEach(p => {
-            const role = p.employeePosition || 'Unassigned';
+            // Note: This needs a join to work correctly if employeePosition is not on the payroll table
+            const role = p.employeePosition || 'Unassigned'; 
             roleCount[role] = (roleCount[role] || 0) + 1;
         });
 
@@ -394,37 +408,46 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("totalCount").textContent = entries.length;
     }
 
-    // ===================================================
-    // LEAVE TAB
-    // ===================================================
-    async function renderLeaveTable() {
-        const leaves = await fetchLeaveRequests();
-        const leaveTable = document.getElementById("leaveTable");
-        
-        leaveTable.innerHTML = '';
-        
-        if (leaves.length === 0) {
-            leaveTable.innerHTML = '<tr><td colspan="4" class="empty">No leave records found</td></tr>';
-            return;
-        }
-        
-        leaves.forEach(l => {
-            const startDate = new Date(l.startDate);
-            const endDate = new Date(l.endDate);
-            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-            
-            leaveTable.innerHTML += `
-                <tr>
-                    <td>${l.employeeName}</td>
-                    <td>${l.leaveType}</td>
-                    <td><span class="status ${l.status}">${l.status}</span></td>
-                    <td>${days} Day${days > 1 ? 's' : ''}</td>
-                </tr>`;
-        });
+// ===================================================
+// LEAVE TAB
+// ===================================================
+async function renderLeaveTable() {
+    const leaves = await fetchLeaveRequests();
+    const leaveTable = document.getElementById("leaveTable");
+    
+    leaveTable.innerHTML = '';
+    
+    if (leaves.length === 0) {
+        leaveTable.innerHTML = '<tr><td colspan="4" class="empty">No leave records found</td></tr>';
+        return;
     }
+    
+    leaves.forEach(l => {
+        const startDate = new Date(l.start_date); 
+        const endDate = new Date(l.end_date);     
+        
+        let days = 0;
+        if (!isNaN(startDate) && !isNaN(endDate)) {
+            days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        } else {
+            days = l.number_of_days || 0; 
+        }
 
-    // ===================================================
-    // PAYROLL TAB
+        // *** CRITICAL FIX: Ensure l.employee_id is used for lookup ***
+        // This links the leave record's ID to the new emp.id key in the map.
+        const employeeName = employeeNameMap[l.employee_id] || 'N/A';
+        
+        leaveTable.innerHTML += `
+            <tr>
+                <td>${employeeName}</td>
+                <td>${l.leave_type}</td>
+                <td><span class="status ${l.status.toLowerCase()}">${l.status}</span></td>
+                <td>${days} Day${days === 1 ? '' : 's'}</td>
+            </tr>`;
+    });
+}
+// ===================================================
+    // PAYROLL TAB (Updated Lookup Logic)
     // ===================================================
     async function renderPayrollTable() {
         const payroll = await fetchPayrollRecords();
@@ -438,27 +461,61 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         payroll.forEach(p => {
+            // STEP 1: Get the universal key from the secondary map using the Payroll FK (p.employee_id -> employees.id)
+            const universalKey = employeeIdToUniversalKeyMap[p.employee_id];
+            
+            // STEP 2: Use the universal key to look up the name
+            const employeeName = employeeNameMap[universalKey] || 'N/A'; 
+            
             payrollTable.innerHTML += `
                 <tr>
-                    <td>${p.employee}</td>
-                    <td>${p.period}</td>
-                    <td>₱${p.netPay.toLocaleString('en-PH', {minimumFractionDigits:2})}</td>
+                    <td>${employeeName}</td>
+                    <td>${p.pay_period_start} - ${p.pay_period_end}</td> 
+                    <td>₱${(p.net_pay || 0).toLocaleString('en-PH', {minimumFractionDigits:2})}</td>
                     <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
                 </tr>`;
         });
     }
-
+    
     // ===================================================
     // INITIALIZE ALL TABS
     // ===================================================
     async function initializeReports() {
+        const employees = await fetchEmployees();
+        
+        // 1. POPULATE THE EMPLOYEE NAME MAP (FINAL UNIFIED FIX)
+        employeeNameMap = {};
+        employeeIdToUniversalKeyMap = {};
+
+        employees.forEach(emp => {
+            let firstName = emp.firstName || emp.first_name || '';
+            let lastName = emp.last_name || emp.last_name || '';
+            let fullName = `${firstName} ${lastName}`.trim();
+            if (!fullName) {
+                 fullName = emp.name || emp.full_name || emp.employeeName || '';
+            }
+            const finalName = fullName || String(emp.employee_id) || 'Unknown Employee';
+
+            // CRITICAL: We use employee_id as the universal key for the map (used by Attendance/Leave)
+            if (emp.employee_id) {
+                employeeNameMap[emp.employee_id] = finalName; 
+            }
+            
+            // SECONDARY MAP: Map the PRIMARY ID (emp.id) to the universal key (emp.employee_id)
+            // This is for the Payroll lookup (which references emp.id)
+            if (emp.id && emp.employee_id) {
+                 employeeIdToUniversalKeyMap[emp.id] = emp.employee_id;
+            }
+        });
+
+        // ... (rest of the functions call)
         await updateSummaryKPIs();
         await initializeCharts();
         await renderAttendanceTable();
         await renderLeaveTable();
         await renderPayrollTable();
-    }
-
+    }    
+    
     // ===================================================
     // RUN ON LOAD
     // ===================================================
@@ -475,8 +532,10 @@ document.addEventListener("DOMContentLoaded", () => {
     supabase
         .channel('reports-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => initializeReports())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, () => initializeReports())
+        // FIX: Changed table name to 'Attendance'
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => initializeReports())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => initializeReports())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_records' }, () => initializeReports())
+        // FIX: Changed table name to 'Payroll'
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll' }, () => initializeReports())
         .subscribe();
 });

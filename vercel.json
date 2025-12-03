@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    {
+      "source": "/html/:path*",
+      "destination": "/:path*"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:path((?!html).*)*",
+      "destination": "/html/:path*",
+      "permanent": false
+    }
+  ]
+}
