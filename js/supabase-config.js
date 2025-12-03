@@ -69,13 +69,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const ADMIN_PIN = "123456";
 
+    // ✅ FIX: Check if loginForm exists before trying to use it
     const loginForm = document.getElementById("loginForm");
     const createBtn = document.getElementById("createBtn");
     const errorMessage = document.getElementById("errorMessage");
 
     if (!loginForm) {
-        console.error("⚠ loginForm not found — Check index.html ID");
-        return;
+        console.log("ℹ️ loginForm not found - probably not on login page");
+        return; // Exit gracefully instead of throwing error
     }
 
     // ===================================================
@@ -88,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pwd = document.getElementById("password").value.trim();
 
         console.log("🔍 Attempting login with employee_id:", employeeId);
-        errorMessage.style.display = "none";
+        if (errorMessage) errorMessage.style.display = "none";
 
         try {
             // Get Employee Record
@@ -99,15 +100,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (empError) {
                 console.log("❌ Database error:", empError);
-                errorMessage.textContent = "❌ Database error. Please try again.";
-                errorMessage.style.display = "block";
+                if (errorMessage) {
+                    errorMessage.textContent = "❌ Database error. Please try again.";
+                    errorMessage.style.display = "block";
+                }
                 return;
             }
 
             if (!employees || employees.length === 0) {
                 console.log("⚠️ Employee not found in database");
-                errorMessage.textContent = "❌ Invalid Employee ID or Password.";
-                errorMessage.style.display = "block";
+                if (errorMessage) {
+                    errorMessage.textContent = "❌ Invalid Employee ID or Password.";
+                    errorMessage.style.display = "block";
+                }
                 return;
             }
 
@@ -117,8 +122,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // Verify Password
             if (employee.password !== pwd) {
                 console.log("⚠️ Password mismatch!");
-                errorMessage.textContent = "❌ Invalid Employee ID or Password.";
-                errorMessage.style.display = "block";
+                if (errorMessage) {
+                    errorMessage.textContent = "❌ Invalid Employee ID or Password.";
+                    errorMessage.style.display = "block";
+                }
                 return;
             }
 
@@ -202,7 +209,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 role: role,
                 position: positionName,
                 department: departmentName,
-                // Add flag for restricted positions
                 isRestricted: hasRestrictedAccess
             };
 
@@ -212,23 +218,22 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // REDIRECT LOGIC BASED ON ROLE AND POSITION
             if (role === "Admin" || role === "HR" || role === "Manager") {
-                // Full access roles go to dashboard
                 console.log("🎯 Redirecting to dashboard (Admin/HR/Manager)...");
                 window.location.href = "dashboard.html";
             } else if (hasRestrictedAccess) {
-                // Restricted positions (Employee, Driver, Dispatcher) go to attendance
                 console.log("🎯 Redirecting to attendance (Restricted Position: " + positionName + ")...");
                 window.location.href = "attendance.html";
             } else {
-                // Other roles go to attendance by default
                 console.log("🎯 Redirecting to attendance (Default)...");
                 window.location.href = "attendance.html";
             }
 
         } catch (error) {
             console.error('❌ Unexpected login error:', error);
-            errorMessage.textContent = "❌ An error occurred. Please try again.";
-            errorMessage.style.display = "block";
+            if (errorMessage) {
+                errorMessage.textContent = "❌ An error occurred. Please try again.";
+                errorMessage.style.display = "block";
+            }
         }
     });
 
@@ -244,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Clear error on input
     document.querySelectorAll("input").forEach(input => {
         input.addEventListener("input", () => {
-            errorMessage.style.display = "none";
+            if (errorMessage) errorMessage.style.display = "none";
         });
     });
 
@@ -353,13 +358,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         pinInput.focus();
 
-        // Only allow numbers in PIN input
         pinInput.addEventListener("input", (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
             pinError.style.display = "none";
         });
 
-        // Submit on Enter key
         pinInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") {
                 verifyPin();
@@ -396,7 +399,6 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.remove();
         });
 
-        // Close modal when clicking outside
         modal.addEventListener("click", (e) => {
             if (e.target === modal) {
                 modal.remove();

@@ -74,76 +74,139 @@
         <button class="back-btn" onclick="window.location.href='employee.html'">← Back to List</button>
       </header>
 
-      <form id="employeeForm" data-mode="edit">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Employee Photo</label>
-            <input type="file" id="empPhoto" accept="image/*">
-            <div id="photoPreview" style="margin-top:8px;"></div>
+      <div class="form-container">
+        <form id="employeeForm" data-mode="edit">
+          
+          <!-- Documents & Photo Section -->
+          <div class="form-section">
+            <div class="form-section-title">📄 Documents & Photo</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Employee Photo</label>
+                <div class="file-upload-container">
+                  <input type="file" id="empPhoto" accept="image/*">
+                  <div class="file-upload-hint">📸 Upload new photo to replace existing</div>
+                </div>
+                <div id="photoPreview" style="margin-top:8px;"></div>
+              </div>
+
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Resume / CV / Certificates</label>
+                <div class="file-upload-container">
+                  <input type="file" id="empFiles" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
+                  <div class="file-upload-hint">📎 Upload additional documents</div>
+                </div>
+                <div id="filesList" style="margin-top:8px;"></div>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label>Resume / CV / Certificate (PDF/Word)</label>
-            <input type="file" id="empFiles" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
-            <div id="filesList" style="margin-top:8px;"></div>
+          <!-- Personal Information Section -->
+          <div class="form-section">
+            <div class="form-section-title">👤 Personal Information</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Employee ID <span class="required">*</span></label>
+                <input type="text" id="empId" required>
+              </div>
+              <div class="form-group">
+                <label>Email Address <span class="required">*</span></label>
+                <input type="email" id="empEmail" required>
+              </div>
+              <div class="form-group">
+                <label>Phone Number <span class="required">*</span></label>
+                <input type="text" id="phone" required>
+              </div>
+              
+              <div class="form-group">
+                <label>First Name <span class="required">*</span></label>
+                <input type="text" id="firstName" required>
+              </div>
+              <div class="form-group">
+                <label>Middle Name</label>
+                <input type="text" id="middleName">
+              </div>
+              <div class="form-group">
+                <label>Last Name <span class="required">*</span></label>
+                <input type="text" id="lastName" required>
+              </div>
+
+              <div class="form-group">
+                <label>Date of Birth <span class="required">*</span></label>
+                <input type="date" id="dob" required>
+              </div>
+              <div class="form-group">
+                <label>Gender <span class="required">*</span></label>
+                <select id="gender" required>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+
+              <div class="form-group form-group-full">
+                <label>Complete Address <span class="required">*</span></label>
+                <input type="text" id="address" required>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group"><label>Employee ID</label><input type="text" id="empId" required></div>
-          <div class="form-group"><label>Email</label><input type="email" id="empEmail" required></div>
-          <div class="form-group"><label>First Name</label><input type="text" id="firstName" required></div>
-          <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required></div>
-          <div class="form-group"><label>Middle Name</label><input type="text" id="middleName" required></div>
-          <div class="form-group"><label>Date of Birth</label><input type="date" id="dob" required></div>
-          <div class="form-group"><label>Gender</label><input type="text" id="gender" required></div>
-          <div class="form-group"><label>Phone</label><input type="text" id="phone" required></div>
-          <div class="form-group"><label>Address</label><input type="text" id="address" required></div>
-        <div class="form-group">
-          <label for="role">Position</label>
-          <select id="role" placeholder="Select Position" required >
-            <option value="" disabled selected>Select Position</option>
-            <option value="Employee">Employee</option>
-            <option value="Manager">Manager</option>
-            <option value="Driver">Driver</option>
-            <option value="Dispatcher">Dispatcher</option>
+          <!-- Employment Details Section -->
+          <div class="form-section">
+            <div class="form-section-title">💼 Employment Details</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Position <span class="required">*</span></label>
+                <select id="Position" required>
+                  <option value="">Select Position</option>
+                  <option value="Employee">Employee</option>
+                  <option value="Manager">Manager</option>
+                  <option value="HR Manager">HR Manager</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Dispatcher">Dispatcher</option>
+                  <option value="Porter">Porter</option>
+                  <option value="Sales Representative">Sales Representative</option>
+                  <option value="HR">HR</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label>Department <span class="required">*</span></label>
+                <input type="text" id="department" placeholder="Department Name" required>
+              </div>
+              
+              <div class="form-group">
+                <label>Date Hired <span class="required">*</span></label>
+                <input type="date" id="dateHired" required>
+              </div>
 
-          </select>
-        </div>
-        <div class="form-group">
-                  <label for="department">Department</label>
-                  <select id="role" placeholder="Select Department" required >
-                    <option value="" disabled selected>Select Department</option>
-                    <option value="IT Department">IT Department</option>
-                    <option value="Employee">Employee</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Driver">Driver</option>
-                    <option value="Dispatcher">Dispatcher</option>
-
-                  </select>
-        </div>          
-        <div class="form-group"><label>Date Hired</label><input type="date" id="dateHired" required></div>
-
-          <div class="form-group">
-            <label>Employment Status</label>
-            <select id="status" required>
-              <option value="">Select Status</option>
-              <option value="Intern">Intern</option>
-              <option value="Probationary">Probationary</option>
-              <option value="Regular">Regular</option>
-              <option value="Resigned">Resigned</option>
-              <option value="Terminated">Terminated</option>
-            </select>
+              <div class="form-group">
+                <label>Employment Status <span class="required">*</span></label>
+                <select id="status" required>
+                  <option value="">Select Status</option>
+                  <option value="Intern">Intern</option>
+                  <option value="Probationary">Probationary</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Resigned">Resigned</option>
+                  <option value="Terminated">Terminated</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label>Monthly Salary (₱) <span class="required">*</span></label>
+                <input type="number" id="salary" step="0.01" required>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group"><label>Monthly Salary (₱)</label><input type="number" id="salary" required></div>
-        </div>
-
-        <input type="hidden" id="editingIndex">
-
-        <div class="form-actions" style="margin-top:20px;">
-          <button type="button" id="cancelEdit" class="cancel-btn margin-bottom">Cancel</button>
-          <button type="submit" id="saveEdit" class="save-btn margin-bottom">Save Changes</button>
-        </div>
-      </form>
+          <div class="form-actions">
+            <button type="button" id="cancelEdit" class="cancel-btn">Cancel</button>
+            <button type="submit" id="saveEdit" class="save-btn">💾 Save Changes</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -228,9 +291,9 @@
       }
     });
   </script>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabase-config.js"></script>
   <script src="../js/employee.js" defer></script>
-
 </body>
 </html>

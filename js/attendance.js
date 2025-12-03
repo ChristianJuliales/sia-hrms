@@ -1,8 +1,7 @@
-// ==================== ATTENDANCE.JS ====================
-// Handles employee time in/out functionality using Supabase
+// ==================== ATTENDANCE.JS - UNIVERSAL VERSION ====================
+// Works for both admin table view and employee clock in/out view
 // ==================== INITIAL SETUP ====================
 
-// Safety check for Supabase
 if (!window.supabaseClient) {
     console.error('Supabase client not initialized! Check script loading order.');
 }
@@ -10,9 +9,14 @@ if (!window.supabaseClient) {
 const supabase = window.supabaseClient;
 let currentEmployee = null;
 
-// ==================== IMPROVED DATE FUNCTIONS ====================
+// ==================== DETECT PAGE TYPE ====================
+const isTableView = !!document.getElementById('attendanceTable');
+const isClockView = !!document.getElementById('btnClockInOut');
 
-// Get current date in YYYY-MM-DD format (LOCAL timezone)
+console.log('Page type:', isTableView ? 'TABLE VIEW' : isClockView ? 'CLOCK VIEW' : 'UNKNOWN');
+
+// ==================== DATE FUNCTIONS ====================
+
 function getCurrentDate() {
     const now = new Date();
     const year = now.getFullYear();
@@ -21,24 +25,124 @@ function getCurrentDate() {
     return `${year}-${month}-${day}`;
 }
 
-// Get current timestamp in ISO format
 function getCurrentTimestamp() {
     return new Date().toISOString();
 }
 
-// ==================== FETCH EMPLOYEE FROM SUPABASE ====================
-
-async function getEmployeeById(empId) {
-    if (!supabase) {
-        console.error('Supabase not available');
-        return null;
+function formatTime(date = new Date()) {
+    if (typeof date === 'string') {
+        date = new Date(date);
     }
+    return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+    });
+}
+
+function formatTimeShort(isoString) {
+    if (!isoString) return '--:--';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+function formatDate(date = new Date()) {
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+    return date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+function formatDateShort(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+function calculateHoursBetween(timeIn, timeOut) {
+    if (!timeIn || !timeOut) return 0;
+    
+    const start = new Date(timeIn);
+    const end = new Date(timeOut);
+    const diffMs = end - start;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    return Math.max(0, diffHours);
+}
+
+function formatHours(hours) {
+    const h = Math.floor(hours);
+    const m = Math.floor((hours - h) * 60);
+    return `${h}h ${m}m`;
+}
+
+// ==================== EMPLOYEE FUNCTIONS ====================
+
+async function getEmployeeByEmail(email) {
+    if (!supabase) return null;
     
     try {
         const { data, error } = await supabase
             .from('employees')
             .select(`
-                *,
+                id,
+                employee_id,
+                first_name,
+                last_name,
+                email,
+                photo_url,
+                positions(
+                    position_name,
+                    departments(department_name)
+                )
+            `)
+            .eq('email', email)
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            empId: data.employee_id,
+            firstName: data.first_name,
+            lastName: data.last_name,
+            email: data.email,
+            position: data.positions?.position_name || 'N/A',
+            department: data.positions?.departments?.department_name || 'N/A',
+            photo: data.photo_url
+        };
+    } catch (error) {
+        console.error('Error fetching employee:', error);
+        return null;
+    }
+}
+
+async function getEmployeeById(empId) {
+    if (!supabase) return null;
+    
+    try {
+        const { data, error } = await supabase
+            .from('employees')
+            .select(`
+                id,
+                employee_id,
+                first_name,
+                last_name,
+                email,
+                photo_url,
                 positions(
                     position_name,
                     departments(department_name)
@@ -54,6 +158,7 @@ async function getEmployeeById(empId) {
             empId: data.employee_id,
             firstName: data.first_name,
             lastName: data.last_name,
+            email: data.email,
             position: data.positions?.position_name || 'N/A',
             department: data.positions?.departments?.department_name || 'N/A',
             photo: data.photo_url
@@ -67,14 +172,10 @@ async function getEmployeeById(empId) {
 // ==================== ATTENDANCE FUNCTIONS ====================
 
 async function getAllTodayRecords(empId) {
-    if (!supabase) {
-        console.error('Supabase not available');
-        return [];
-    }
+    if (!supabase) return [];
     
     try {
         const today = getCurrentDate();
-        console.log('📅 Fetching records for date:', today);
         
         const { data, error } = await supabase
             .from('attendance')
@@ -85,7 +186,6 @@ async function getAllTodayRecords(empId) {
 
         if (error) throw error;
         
-        console.log('Found records:', data);
         return data || [];
     } catch (error) {
         console.error('Error fetching today records:', error);
@@ -94,10 +194,7 @@ async function getAllTodayRecords(empId) {
 }
 
 async function getTodayActiveRecord(empId) {
-    if (!supabase) {
-        console.error('Supabase not available');
-        return null;
-    }
+    if (!supabase) return null;
     
     try {
         const today = getCurrentDate();
@@ -121,52 +218,207 @@ async function getTodayActiveRecord(empId) {
     }
 }
 
-// ==================== TIME CALCULATION ====================
+async function fetchAttendanceRecords(selectedDate = null) {
+    if (!supabase) return [];
+    
+    try {
+        // First, get attendance records
+        let query = supabase
+            .from('attendance')
+            .select('id, employee_id, date, time_in, time_out')
+            .order('date', { ascending: false })
+            .order('time_in', { ascending: false });
 
-function calculateHoursBetween(timeIn, timeOut) {
-    if (!timeIn || !timeOut) return 0;
-    
-    const start = new Date(timeIn);
-    const end = new Date(timeOut);
-    const diffMs = end - start;
-    const diffHours = diffMs / (1000 * 60 * 60);
-    
-    return Math.max(0, diffHours);
+        if (selectedDate) {
+            query = query.eq('date', selectedDate);
+        }
+
+        const { data: attendanceData, error: attError } = await query;
+
+        if (attError) throw attError;
+
+        if (!attendanceData || attendanceData.length === 0) {
+            return [];
+        }
+
+        // Get unique employee IDs
+        const employeeIds = [...new Set(attendanceData.map(r => r.employee_id))];
+
+        // Fetch employee details separately
+        const { data: employeesData, error: empError } = await supabase
+            .from('employees')
+            .select(`
+                employee_id,
+                first_name,
+                last_name,
+                position_id
+            `)
+            .in('employee_id', employeeIds);
+
+        if (empError) {
+            console.error('Error fetching employees:', empError);
+        }
+
+        // Get all position IDs
+        const positionIds = employeesData
+            ?.filter(e => e.position_id)
+            .map(e => e.position_id) || [];
+
+        // Fetch positions separately
+        let positionsData = [];
+        if (positionIds.length > 0) {
+            const { data: posData, error: posError } = await supabase
+                .from('positions')
+                .select('id, position_name, department_id')
+                .in('id', positionIds);
+
+            if (posError) {
+                console.error('Error fetching positions:', posError);
+            } else {
+                positionsData = posData || [];
+            }
+        }
+
+        // Get all department IDs
+        const departmentIds = positionsData
+            .filter(p => p.department_id)
+            .map(p => p.department_id);
+
+        // Fetch departments separately
+        let departmentsData = [];
+        if (departmentIds.length > 0) {
+            const { data: deptData, error: deptError } = await supabase
+                .from('departments')
+                .select('id, department_name')
+                .in('id', departmentIds);
+
+            if (deptError) {
+                console.error('Error fetching departments:', deptError);
+            } else {
+                departmentsData = deptData || [];
+            }
+        }
+
+        // Build lookup maps
+        const employeeMap = {};
+        employeesData?.forEach(emp => {
+            employeeMap[emp.employee_id] = emp;
+        });
+
+        const positionMap = {};
+        positionsData.forEach(pos => {
+            positionMap[pos.id] = pos;
+        });
+
+        const departmentMap = {};
+        departmentsData.forEach(dept => {
+            departmentMap[dept.id] = dept;
+        });
+
+        // Combine all data
+        const enrichedRecords = attendanceData.map(record => {
+            const employee = employeeMap[record.employee_id] || {};
+            const position = employee.position_id ? positionMap[employee.position_id] : null;
+            const department = position?.department_id ? departmentMap[position.department_id] : null;
+
+            return {
+                ...record,
+                employees: {
+                    first_name: employee.first_name || '',
+                    last_name: employee.last_name || '',
+                    positions: {
+                        position_name: position?.position_name || 'N/A',
+                        departments: {
+                            department_name: department?.department_name || 'N/A'
+                        }
+                    }
+                }
+            };
+        });
+
+        console.log('✅ Fetched attendance records:', enrichedRecords.length);
+        return enrichedRecords;
+        
+    } catch (error) {
+        console.error('❌ Error fetching attendance records:', error);
+        return [];
+    }
 }
 
-function formatHours(hours) {
-    const h = Math.floor(hours);
-    const m = Math.floor((hours - h) * 60);
-    return `${h}h ${m}m`;
-}
+// ==================== TABLE VIEW FUNCTIONS ====================
 
-// ==================== FORMATTING HELPERS ====================
+async function renderAttendanceTable(records) {
+    const tableBody = document.getElementById('attendanceTable');
+    const totalAttendance = document.getElementById('totalAttendance');
+    
+    if (!tableBody) return;
 
-function formatTime(date = new Date()) {
-    return date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true
+    if (totalAttendance) {
+        totalAttendance.textContent = `Total Attendance: ${records.length}`;
+    }
+
+    tableBody.innerHTML = '';
+
+    if (records.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: #999;">
+                    No attendance records found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    records.forEach(record => {
+        const employee = record.employees || {};
+        const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Unknown';
+        const position = employee.positions?.position_name || 'N/A';
+        const department = employee.positions?.departments?.department_name || 'N/A';
+        
+        const timeIn = formatTimeShort(record.time_in);
+        const timeOut = formatTimeShort(record.time_out);
+        const totalHours = record.time_out ? formatHours(calculateHoursBetween(record.time_in, record.time_out)) : '--';
+        const date = formatDateShort(record.date);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${record.employee_id}</td>
+            <td><strong>${fullName}</strong></td>
+            <td>${department}</td>
+            <td>${position}</td>
+            <td>${date}</td>
+            <td><span style="color: #27ae60; font-weight: 600;">${timeIn}</span></td>
+            <td><span style="color: ${record.time_out ? '#e74c3c' : '#f39c12'}; font-weight: 600;">${timeOut}</span></td>
+            <td><strong>${totalHours}</strong></td>
+            <td>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
     });
 }
 
-function formatDate(date = new Date()) {
-    return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric"
+function filterRecords(records, searchTerm) {
+    if (!searchTerm) return records;
+    
+    searchTerm = searchTerm.toLowerCase();
+    
+    return records.filter(record => {
+        const employee = record.employees || {};
+        const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.toLowerCase();
+        const empId = (record.employee_id || '').toLowerCase();
+        const position = (employee.positions?.position_name || '').toLowerCase();
+        const department = (employee.positions?.departments?.department_name || '').toLowerCase();
+        
+        return fullName.includes(searchTerm) ||
+               empId.includes(searchTerm) ||
+               position.includes(searchTerm) ||
+               department.includes(searchTerm);
     });
 }
 
-function formatTimeFromISO(isoString) {
-    if (!isoString) return "--:--:--";
-    const date = new Date(isoString);
-    return formatTime(date);
-}
-
-// ==================== MODAL MANAGEMENT ====================
+// ==================== CLOCK VIEW FUNCTIONS ====================
 
 function createInitialAvatar(firstName, lastName) {
     const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
@@ -187,16 +439,16 @@ function createInitialAvatar(firstName, lastName) {
     return canvas.toDataURL();
 }
 
-// ==================== UI UPDATES ====================
-
 async function refreshRecordsDisplay() {
     if (!currentEmployee) {
-        // Clear display when no employee
-        document.querySelector('.records-grid').innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
-                Please log in to view records
-            </div>
-        `;
+        const recordsGrid = document.querySelector('.records-grid');
+        if (recordsGrid) {
+            recordsGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
+                    Please log in to view records
+                </div>
+            `;
+        }
         return;
     }
     
@@ -205,54 +457,44 @@ async function refreshRecordsDisplay() {
     
     updateRecordsDisplay(records, activeRecord);
     updateClockButton(activeRecord);
-    updateDateDisplay();
-}
-
-function updateDateDisplay() {
-    const dateElement = document.getElementById('currentDate');
-    const today = getCurrentDate();
-    
-    dateElement.textContent = formatDate();
-    console.log('📅 Current date:', today);
 }
 
 function updateRecordsDisplay(records, activeRecord) {
-    const recordsGrid = document.querySelector('.records-grid');
+    const recordsGrid = document.querySelector('.records-grid-compact');
+    if (!recordsGrid) return;
     
     if (!records || records.length === 0) {
         recordsGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 15px; color: #999; font-size: 11px;">
                 No time entries yet today
             </div>
         `;
         return;
     }
     
-    // Show single in/out record
     const record = records[0];
     const timeIn = formatTimeFromISO(record.time_in);
-    const timeOut = record.time_out ? formatTimeFromISO(record.time_out) : '--:--:--';
+    const timeOut = record.time_out ? formatTimeFromISO(record.time_out) : '--:--';
     const isActive = record.time_out === null;
     const hours = record.time_out ? calculateHoursBetween(record.time_in, record.time_out) : 0;
     
     let html = `
-        <div class="time-record in ${isActive ? 'active' : ''}">
-            <span class="record-label">TIME IN</span>
-            <span class="record-time">${timeIn}</span>
+        <div class="time-record-compact in ${isActive ? 'active' : ''}">
+            <span class="record-label-compact">TIME IN</span>
+            <span class="record-time-compact">${timeIn}</span>
         </div>
-        <div class="time-record out ${isActive ? 'active' : ''}">
-            <span class="record-label">TIME OUT</span>
-            <span class="record-time">${timeOut}</span>
-            ${record.time_out ? `<span class="record-duration">${formatHours(hours)}</span>` : '<span class="record-duration" style="color:#f39c12;">Active</span>'}
+        <div class="time-record-compact out ${isActive ? 'active' : ''}">
+            <span class="record-label-compact">TIME OUT</span>
+            <span class="record-time-compact">${timeOut}</span>
+            ${record.time_out ? `<span class="record-duration-compact">${formatHours(hours)}</span>` : '<span class="record-duration-compact" style="color:#f39c12;">Active</span>'}
         </div>
     `;
     
-    // Add total hours row if clocked out
     if (record.time_out) {
         html += `
-            <div class="time-record total" style="grid-column: 1 / -1; background: #e8f5e9; border: 2px solid #4caf50;">
-                <span class="record-label" style="font-weight: bold; font-size: 16px;">TOTAL HOURS TODAY</span>
-                <span class="record-time" style="font-weight: bold; font-size: 20px; color: #2e7d32;">${formatHours(hours)}</span>
+            <div class="time-record-compact total">
+                <span class="record-label-compact">TOTAL HOURS TODAY</span>
+                <span class="record-time-compact">${formatHours(hours)}</span>
             </div>
         `;
     }
@@ -262,27 +504,27 @@ function updateRecordsDisplay(records, activeRecord) {
 
 function updateClockButton(activeRecord) {
     const btn = document.getElementById('btnClockInOut');
+    if (!btn) return;
     
     if (activeRecord) {
-        // Currently clocked in
         btn.innerHTML = '<span class="icon">🔴</span> CLOCK OUT';
         btn.style.background = '#e74c3c';
     } else {
-        // Not clocked in
         btn.innerHTML = '<span class="icon">🟢</span> CLOCK IN';
         btn.style.background = '#27ae60';
     }
 }
 
-function showAlert(message, type = 'success', alertId = 'alertBox2') {
-    const alertBox = document.getElementById(alertId);
-    if (!alertBox) return;
-    alertBox.textContent = message;
-    alertBox.className = `alert show ${type}`;
-    setTimeout(() => alertBox.classList.remove('show'), 3000);
+function showAlert(message, type = 'success') {
+    const alertBox = document.getElementById('alertBox2');
+    if (alertBox) {
+        alertBox.textContent = message;
+        alertBox.className = `alert show ${type}`;
+        setTimeout(() => alertBox.classList.remove('show'), 3000);
+    } else {
+        console.log('Alert:', message);
+    }
 }
-
-// ==================== TIME IN/OUT HANDLERS ====================
 
 async function handleTimeIn() {
     if (!currentEmployee) {
@@ -290,50 +532,39 @@ async function handleTimeIn() {
         return;
     }
 
-    if (!supabase) {
-        showAlert('Database connection error', 'error');
-        return;
-    }
-
     const today = getCurrentDate();
     const now = getCurrentTimestamp();
 
-    console.log('🟢 CLOCK IN ATTEMPT');
-    console.log('Employee:', currentEmployee.empId);
-    console.log('Date:', today);
-    console.log('Timestamp:', now);
-
     try {
-        // Check if ANY attendance record exists for today
         const allTodayRecords = await getAllTodayRecords(currentEmployee.empId);
         
         if (allTodayRecords && allTodayRecords.length > 0) {
-            showAlert('⚠️ You already have attendance record(s) for today! Cannot clock in again.', 'warning');
+            showAlert('⚠️ You already have attendance record(s) for today!', 'warning');
             return;
         }
 
-        // Insert new attendance record (only ONE per day allowed)
+        const insertData = {
+            employee_id: currentEmployee.empId,
+            employee_uuid: currentEmployee.id,
+            date: today,
+            time_in: now,
+            time_out: null
+        };
+
         const { data, error } = await supabase
             .from('attendance')
-            .insert({
-                employee_id: currentEmployee.empId,
-                employee_uuid: currentEmployee.id,
-                date: today,
-                time_in: now,
-                time_out: null
-            })
+            .insert(insertData)
             .select()
             .single();
 
         if (error) throw error;
 
-        console.log('✅ Time in recorded:', data);
-
         showAlert('✅ Clocked In Successfully!', 'success');
-        await refreshRecordsDisplay();
+        setTimeout(() => refreshRecordsDisplay(), 500);
+        
     } catch (error) {
-        console.error('❌ Error clocking in:', error);
-        showAlert('❌ Error recording time in: ' + error.message, 'error');
+        console.error('Error clocking in:', error);
+        showAlert('❌ Error: ' + error.message, 'error');
     }
 }
 
@@ -343,16 +574,7 @@ async function handleTimeOut() {
         return;
     }
 
-    if (!supabase) {
-        showAlert('Database connection error', 'error');
-        return;
-    }
-
     const now = getCurrentTimestamp();
-    
-    console.log('🔴 CLOCK OUT ATTEMPT');
-    console.log('Employee:', currentEmployee.empId);
-    console.log('Timestamp:', now);
 
     try {
         const activeRecord = await getTodayActiveRecord(currentEmployee.empId);
@@ -362,7 +584,6 @@ async function handleTimeOut() {
             return;
         }
 
-        // Update time_out for the active record
         const { data, error } = await supabase
             .from('attendance')
             .update({ time_out: now })
@@ -373,83 +594,81 @@ async function handleTimeOut() {
         if (error) throw error;
 
         const duration = calculateHoursBetween(activeRecord.time_in, now);
-        console.log('✅ Time out recorded:', data);
-
         showAlert(`✅ Clocked Out! Session: ${formatHours(duration)}`, 'success');
-        await refreshRecordsDisplay();
+        setTimeout(() => refreshRecordsDisplay(), 500);
+        
     } catch (error) {
-        console.error('❌ Error clocking out:', error);
-        showAlert('❌ Error recording time out: ' + error.message, 'error');
+        console.error('Error clocking out:', error);
+        showAlert('❌ Error: ' + error.message, 'error');
     }
 }
 
-// ==================== CLOCK ====================
-
 function startClock() {
-    document.getElementById('currentTime').textContent = formatTime();
-    setInterval(() => {
-        document.getElementById('currentTime').textContent = formatTime();
-    }, 1000);
+    const timeEl = document.getElementById('currentTime');
+    if (timeEl) {
+        timeEl.textContent = formatTime();
+        setInterval(() => {
+            timeEl.textContent = formatTime();
+        }, 1000);
+    }
 }
-
-// ==================== AUTO-LOAD LOGGED IN USER ====================
 
 async function loadLoggedInEmployee() {
     try {
         const loggedInUserString = localStorage.getItem('loggedInUser');
         
         if (!loggedInUserString) {
-            console.warn('⚠️ No logged in user found in localStorage');
-            showAlert('Please log in to the attendance system first', 'warning');
-            return false;
+            throw new Error('Please log in first');
         }
 
         const loggedInUser = JSON.parse(loggedInUserString);
-        console.log('📋 Logged in user data:', loggedInUser);
 
-        // Try multiple possible employee ID fields
-        const empId = loggedInUser.employee_id || loggedInUser.empId || loggedInUser.id;
-        
-        if (!empId) {
-            console.error('❌ No employee ID found in logged in user data');
-            showAlert('Employee ID not found. Please log in again.', 'error');
-            return false;
+        let employee = null;
+
+        if (loggedInUser.email) {
+            employee = await getEmployeeByEmail(loggedInUser.email);
         }
 
-        console.log('🔍 Loading employee with ID:', empId);
-        
-        const employee = await getEmployeeById(empId);
-        
+        if (!employee && loggedInUser.employee_id) {
+            employee = await getEmployeeById(loggedInUser.employee_id);
+        }
+
         if (!employee) {
-            console.error('❌ Employee not found in database');
-            showAlert('Employee data not found. Please contact HR.', 'error');
-            return false;
+            throw new Error('Employee data not found in database');
         }
 
-        // Successfully loaded employee
         currentEmployee = employee;
         const fullName = `${employee.firstName} ${employee.lastName}`;
         const photo = employee.photo || createInitialAvatar(employee.firstName, employee.lastName);
 
-        // Update UI with employee info
-        document.getElementById('profileImg').src = photo;
-        document.getElementById('displayName').textContent = fullName;
-        document.getElementById('displayPosition').textContent = employee.position;
-        document.getElementById('displayId').textContent = employee.empId;
+        const elements = {
+            profileImg: document.getElementById('profileImg'),
+            displayName: document.getElementById('displayName'),
+            displayPosition: document.getElementById('displayPosition'),
+            displayId: document.getElementById('displayId'),
+            detailId: document.getElementById('detailId'),
+            detailName: document.getElementById('detailName'),
+            detailPosition: document.getElementById('detailPosition'),
+            detailDept: document.getElementById('detailDept')
+        };
 
-        document.getElementById('detailId').textContent = employee.empId;
-        document.getElementById('detailName').textContent = fullName;
-        document.getElementById('detailPosition').textContent = employee.position;
-        document.getElementById('detailDept').textContent = employee.department;
+        if (elements.profileImg) elements.profileImg.src = photo;
+        if (elements.displayName) elements.displayName.textContent = fullName;
+        if (elements.displayPosition) elements.displayPosition.textContent = employee.position;
+        if (elements.displayId) elements.displayId.textContent = employee.empId;
+        if (elements.detailId) elements.detailId.textContent = employee.empId;
+        if (elements.detailName) elements.detailName.textContent = fullName;
+        if (elements.detailPosition) elements.detailPosition.textContent = employee.position;
+        if (elements.detailDept) elements.detailDept.textContent = employee.department;
 
-        console.log('✅ Employee loaded successfully:', fullName);
+        console.log('✅ Employee loaded:', fullName);
         
         await refreshRecordsDisplay();
         return true;
 
     } catch (error) {
-        console.error('❌ Error loading logged in employee:', error);
-        showAlert('Error loading employee data: ' + error.message, 'error');
+        console.error('Error loading employee:', error);
+        showAlert(error.message, 'error');
         return false;
     }
 }
@@ -457,91 +676,143 @@ async function loadLoggedInEmployee() {
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check if Supabase is ready
     if (!supabase) {
-        alert('Database connection failed. Please refresh the page or check your internet connection.');
-        console.error('Supabase client not available on page load');
+        alert('Database connection failed. Please refresh the page.');
         return;
     }
 
-    console.log('✅ Time In/Out System Initialized');
-    console.log('📅 Current Date:', getCurrentDate());
+    console.log('✅ Attendance System Initializing...');
 
-    document.getElementById('currentDate').textContent = formatDate();
+    // ==================== TABLE VIEW INITIALIZATION ====================
+   // ==================== TABLE VIEW INITIALIZATION ====================
+if (isTableView) {
+    console.log('📊 Initializing TABLE VIEW');
 
-    // Set default display
-    document.getElementById('displayName').textContent = '--';
-    document.getElementById('displayPosition').textContent = '--';
-    document.getElementById('displayId').textContent = '--';
-    document.getElementById('detailId').textContent = '--';
-    document.getElementById('detailName').textContent = '--';
-    document.getElementById('detailPosition').textContent = '--';
-    document.getElementById('detailDept').textContent = '--';
+    let allRecords = [];
+    const dateInput = document.getElementById('attendanceDate');
+    const searchInput = document.getElementById('search');
 
-    // AUTO-LOAD: Load the logged-in employee automatically
-    const loaded = await loadLoggedInEmployee();
-    
-    if (!loaded) {
-        console.warn('⚠️ Could not auto-load employee. User must log in.');
+    // Get logged-in user info
+    const loggedInUserString = localStorage.getItem('loggedInUser');
+    let loggedInUser = null;
+    let userRole = 'Employee';
+    let userEmployeeId = null;
+
+    if (loggedInUserString) {
+        loggedInUser = JSON.parse(loggedInUserString);
+        userRole = loggedInUser.role || 'Employee';
+        userEmployeeId = loggedInUser.empId || loggedInUser.employee_id;
     }
 
-    // Button event listeners
-    const btnLogout = document.getElementById("btnLogout");
-    const btnClockInOut = document.getElementById("btnClockInOut");
-
-    btnLogout?.addEventListener('click', () => {
-        currentEmployee = null;
-        
-        // Clear employee display
-        document.getElementById('displayName').textContent = '--';
-        document.getElementById('displayPosition').textContent = '--';
-        document.getElementById('displayId').textContent = '--';
-        
-        // Clear details
-        document.getElementById('detailId').textContent = '--';
-        document.getElementById('detailName').textContent = '--';
-        document.getElementById('detailPosition').textContent = '--';
-        document.getElementById('detailDept').textContent = '--';
-        
-        // Clear records
-        document.querySelector('.records-grid').innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
-                Please log in to view records
-            </div>
-        `;
-        
-        // Reset button
-        const btn = document.getElementById('btnClockInOut');
-        btn.innerHTML = '<span class="icon">🟢</span> CLOCK IN';
-        btn.style.background = '#27ae60';
-        
-        showAlert('Session cleared.', 'success', 'alertBox2');
+    console.log('👤 Table View User:', {
+        role: userRole,
+        employeeId: userEmployeeId
     });
 
-    btnClockInOut?.addEventListener('click', async () => {
-        if (!currentEmployee) {
-            showAlert('Please log in to attendance system first', 'warning', 'alertBox2');
-            return;
-        }
+    const today = getCurrentDate();
+    if (dateInput) {
+        dateInput.value = today;
+    }
+
+    async function loadTableData() {
+        const selectedDate = dateInput ? dateInput.value : today;
+        allRecords = await fetchAttendanceRecords(selectedDate);
         
-        // Check if there's an active record (no time_out)
-        const activeRecord = await getTodayActiveRecord(currentEmployee.empId);
+        // 🔒 FILTER BY USER ROLE
+        let filteredByRole = allRecords;
         
-        if (!activeRecord) {
-            // No active session, so clock in
-            await handleTimeIn();
+        if (userRole === 'Employee' || userRole === 'Dispatcher' || userRole === 'Driver') {
+            // Show only their own records
+            filteredByRole = allRecords.filter(record => 
+                record.employee_id === userEmployeeId
+            );
+            console.log(`🔒 Employee view: Filtered to ${filteredByRole.length} own records`);
         } else {
-            // Active session exists, so clock out
-            await handleTimeOut();
+            console.log(`👔 Admin/HR/Manager view: Showing all ${allRecords.length} records`);
         }
-    });
+        
+        const searchTerm = searchInput ? searchInput.value : '';
+        const filteredRecords = filterRecords(filteredByRole, searchTerm);
+        
+        await renderAttendanceTable(filteredRecords);
+    }
+        await loadTableData();
 
-    startClock();
-    
-    // Auto-refresh records every 30 seconds if logged in
-    setInterval(async () => {
-        if (currentEmployee) {
-            await refreshRecordsDisplay();
+        if (dateInput) {
+            dateInput.addEventListener('change', loadTableData);
         }
-    }, 30000);
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value;
+                const filteredRecords = filterRecords(allRecords, searchTerm);
+                renderAttendanceTable(filteredRecords);
+            });
+        }
+
+        supabase
+            .channel('attendance-table-changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'attendance'
+            }, () => {
+                console.log('🔄 Data changed, refreshing...');
+                loadTableData();
+            })
+            .subscribe();
+
+        console.log('✅ Table View Ready');
+    }
+
+    // ==================== CLOCK VIEW INITIALIZATION ====================
+    if (isClockView) {
+        console.log('⏰ Initializing CLOCK VIEW');
+
+        await loadLoggedInEmployee();
+
+        const btnLogout = document.getElementById("btnLogout");
+        const btnClockInOut = document.getElementById("btnClockInOut");
+
+        btnLogout?.addEventListener('click', () => {
+            currentEmployee = null;
+            const elements = ['displayName', 'displayPosition', 'displayId', 'detailId', 'detailName', 'detailPosition', 'detailDept'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '--';
+            });
+            
+            const recordsGrid = document.querySelector('.records-grid');
+            if (recordsGrid) {
+                recordsGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">Please log in</div>';
+            }
+            
+            showAlert('Session cleared.', 'success');
+        });
+
+        btnClockInOut?.addEventListener('click', async () => {
+            if (!currentEmployee) {
+                showAlert('Please log in first', 'warning');
+                return;
+            }
+            
+            const activeRecord = await getTodayActiveRecord(currentEmployee.empId);
+            
+            if (!activeRecord) {
+                await handleTimeIn();
+            } else {
+                await handleTimeOut();
+            }
+        });
+
+        startClock();
+        
+        setInterval(async () => {
+            if (currentEmployee) {
+                await refreshRecordsDisplay();
+            }
+        }, 30000);
+
+        console.log('✅ Clock View Ready');
+    }
 });

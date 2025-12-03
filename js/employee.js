@@ -345,15 +345,16 @@
   }
 
   /* ========================= ADD PAGE ========================= */
+/* ========================= ADD PAGE ========================= */
+/* ========================= ADD PAGE ========================= */
 if (isAddPage) {
   const form = qs('employeeForm');
   const cancelBtn = qs('cancelAdd');
   
-  // Fix: Use correct ID "Position" (capital P) from your HTML
-  const positionSelect = qs('Position');  // Changed from 'position' to 'Position'
-  const salaryInput = qs('salary');
-  
-  if (!form) return;
+  if (!form) {
+    console.error('Form not found!');
+    return;
+  }
 
   // Salary mapping based on position
   const positionSalaryMap = {
@@ -361,107 +362,124 @@ if (isAddPage) {
     'Manager': 35000.00,
     'HR Manager': 35000.00,
     'Driver': 18000.00,
-    'Dispatcher': 17000.00
+    'Dispatcher': 17000.00,
+    'Porter': 15000.00,
+    'Sales Representative': 20000.00,
+    'HR': 25000.00
   };
 
-    if (positionSelect && salaryInput) {
-    positionSelect.addEventListener('change', function() {
-      const selectedPosition = this.value;
-      
-      console.log('Position selected:', selectedPosition); // Debug log
-      
-      // Check if position exists in our mapping
-      if (positionSalaryMap.hasOwnProperty(selectedPosition)) {
-        salaryInput.value = positionSalaryMap[selectedPosition].toFixed(2);
-        
-        // Visual feedback - brief green highlight
-        salaryInput.style.backgroundColor = '#d4edda';
-        salaryInput.style.transition = 'background-color 0.3s ease';
-        
-        setTimeout(() => {
-          salaryInput.style.backgroundColor = '#f5f5f5';
-        }, 500);
-        
-        console.log('Salary set to:', salaryInput.value); // Debug log
-      } else {
-        // Default salary for unlisted positions
-        salaryInput.value = '15000.00';
-        console.log('Using default salary'); // Debug log
-      }
-    });
-  } else {
-    console.error('Position select or salary input not found!');
-    console.log('Position element:', positionSelect);
-    console.log('Salary element:', salaryInput);
+  // Wait for DOM to be fully ready
+  const positionSelect = qs('Position');
+  const salaryInput = qs('salary');
+  
+  console.log('Position element found:', positionSelect);
+  console.log('Salary element found:', salaryInput);
+  
+  if (!positionSelect || !salaryInput) {
+    console.error('Required elements not found!');
+    return;
   }
 
+  // Auto-fill salary when position changes
+  positionSelect.addEventListener('change', function() {
+    const selectedPosition = this.value;
+    console.log('Position selected:', selectedPosition);
+    
+    if (!selectedPosition) {
+      salaryInput.value = '';
+      return;
+    }
+    
+    const salary = positionSalaryMap[selectedPosition] || 15000.00;
+    salaryInput.value = salary.toFixed(2);
+    
+    console.log('Salary set to:', salaryInput.value);
+    
+    // Visual feedback - green flash
+    salaryInput.style.backgroundColor = '#d4edda';
+    salaryInput.style.transition = 'background-color 0.3s ease';
+    
+    setTimeout(() => {
+      salaryInput.style.backgroundColor = '';
+    }, 500);
+  });
 
-  // Rest of your form submit handler...
+  // Form submit handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     // Validate required fields
-    const requiredFields = ['empId', 'empEmail', 'firstName', 'lastName', 'dob', 'gender', 'phone', 'address', 'Position', 'department', 'dateHired', 'status', 'salary'];
-    let isValid = true;
+    const requiredFields = {
+      'empId': 'Employee ID',
+      'empEmail': 'Email',
+      'firstName': 'First Name',
+      'lastName': 'Last Name',
+      'dob': 'Date of Birth',
+      'gender': 'Gender',
+      'phone': 'Phone',
+      'address': 'Address',
+      'Position': 'Position',
+      'department': 'Department',
+      'dateHired': 'Date Hired',
+      'status': 'Employment Status',
+      'salary': 'Monthly Salary'
+    };
     
-    for (const fieldId of requiredFields) {
+    for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
       const field = qs(fieldId);
       if (!field || !field.value.trim()) {
-        alert(`Please fill in the ${fieldId} field`);
-        field && field.focus();
-        isValid = false;
-        break;
+        alert(`Please fill in the ${fieldName} field`);
+        if (field) field.focus();
+        return;
       }
     }
 
-      if (!isValid) return;
+    const photoInput = qs('empPhoto');
+    const filesInput = qs('empFiles');
 
-      const photoInput = qs('empPhoto');
-      const filesInput = qs('empFiles');
+    let photoBase64 = null;
+    if (photoInput && photoInput.files && photoInput.files.length) {
+      photoBase64 = await toBase64(photoInput.files[0]);
+    }
 
-      let photoBase64 = null;
-      if (photoInput && photoInput.files && photoInput.files.length) {
-        photoBase64 = await toBase64(photoInput.files[0]);
+    const filesArr = [];
+    if (filesInput && filesInput.files && filesInput.files.length) {
+      for (let f of filesInput.files) {
+        const base = await toBase64(f);
+        filesArr.push({ name: f.name, data: base });
       }
+    }
 
-      const filesArr = [];
-      if (filesInput && filesInput.files && filesInput.files.length) {
-        for (let f of filesInput.files) {
-          const base = await toBase64(f);
-          filesArr.push({ name: f.name, data: base });
-        }
-      }
+    // Build employee object
+    const emp = {
+      empId: qs('empId').value.trim(),
+      email: qs('empEmail').value.trim(),
+      firstName: qs('firstName').value.trim(),
+      lastName: qs('lastName').value.trim(),
+      middleName: qs('middleName') ? qs('middleName').value.trim() : '',
+      dob: qs('dob').value,
+      gender: qs('gender').value,
+      phone: qs('phone').value.trim(),
+      address: qs('address').value.trim(),
+      position: qs('Position').value.trim(),
+      department: qs('department').value.trim(),
+      dateHired: qs('dateHired').value,
+      status: qs('status').value,
+      salary: parseFloat(qs('salary').value),
+      photo: photoBase64,
+      files: filesArr
+    };
 
-      // Build employee object
-      const emp = {
-        empId: qs('empId').value.trim(),
-        email: qs('empEmail').value.trim(),
-        firstName: qs('firstName').value.trim(),
-        lastName: qs('lastName').value.trim(),
-        middleName: qs('middleName') ? qs('middleName').value.trim() : '',
-        dob: qs('dob').value,
-        gender: qs('gender').value,
-        phone: qs('phone').value.trim(),
-        address: qs('address').value.trim(),
-        position: qs('position').value.trim(),
-        department: qs('department').value.trim(),
-        dateHired: qs('dateHired').value,
-        status: qs('status').value,
-        salary: qs('salary').value,
-        photo: photoBase64,
-        files: filesArr
-      };
+    console.log('Submitting employee data:', emp);
 
-      console.log('Submitting employee data:', emp);
+    const success = await insertEmployee(emp);
+    if (success) {
+      window.location.href = 'employee.html';
+    }
+  });
 
-      const success = await insertEmployee(emp);
-      if (success) {
-        window.location.href = 'employee.html';
-      }
-    });
-
-    cancelBtn && cancelBtn.addEventListener('click', ()=> window.location.href = 'employee.html');
-  }
+  cancelBtn && cancelBtn.addEventListener('click', ()=> window.location.href = 'employee.html');
+}
 
 })();
 
@@ -637,101 +655,181 @@ if (isAddPage) {
   const isViewPage = !!qs('viewContent');
 
   /* ========================= EDIT PAGE ========================= */
-  if (isEditPage) {
-    const id = getQueryParam('id');
-    if (!id) {
-      alert('Invalid employee ID');
+ /* ========================= EDIT PAGE ========================= */
+if (isEditPage) {
+  const id = getQueryParam('id');
+  if (!id) {
+    alert('Invalid employee ID');
+    window.location.href = 'employee.html';
+    return;
+  }
+
+  (async function loadEditPage() {
+    const emp = await fetchEmployeeById(id);
+    if (!emp) {
+      alert('Employee not found');
       window.location.href = 'employee.html';
       return;
     }
 
-    (async function loadEditPage() {
-      const emp = await fetchEmployeeById(id);
-      if (!emp) {
-        alert('Employee not found');
-        window.location.href = 'employee.html';
-        return;
-      }
+    // Load all fields
+    const fieldMap = {
+      'empId': 'empId',
+      'empEmail': 'email',
+      'firstName': 'firstName',
+      'lastName': 'lastName',
+      'middleName': 'middleName',
+      'dob': 'dob',
+      'gender': 'gender',
+      'phone': 'phone',
+      'address': 'address',
+      'Position': 'position',
+      'department': 'department',
+      'dateHired': 'dateHired',
+      'status': 'status',
+      'salary': 'salary'
+    };
 
-      ['empId','empEmail','firstName','lastName','middleName','dob','gender','phone','address','position','department','dateHired','status','salary'].forEach(fid => {
-        const el = qs(fid);
-        if (el) el.value = emp[fid === 'empEmail' ? 'email' : fid] || '';
+    Object.keys(fieldMap).forEach(fieldId => {
+      const el = qs(fieldId);
+      const dataKey = fieldMap[fieldId];
+      if (el && emp[dataKey] !== undefined) {
+        el.value = emp[dataKey] || '';
+      }
+    });
+
+    // ✅ ADD AUTO-FILL SALARY FUNCTIONALITY FOR EDIT PAGE
+    const positionSelect = qs('Position');
+    const salaryInput = qs('salary');
+    
+    // Salary mapping
+    const positionSalaryMap = {
+      'Employee': 15000.00,
+      'Manager': 35000.00,
+      'HR Manager': 35000.00,
+      'Driver': 18000.00,
+      'Dispatcher': 17000.00,
+      'Porter': 15000.00,
+      'Sales Representative': 20000.00,
+      'HR': 25000.00
+    };
+
+    // Auto-fill salary when position changes in EDIT mode
+    if (positionSelect && salaryInput) {
+      positionSelect.addEventListener('change', function() {
+        const selectedPosition = this.value;
+        
+        if (!selectedPosition) {
+          return; // Don't clear existing salary if position is cleared
+        }
+        
+        const salary = positionSalaryMap[selectedPosition] || 15000.00;
+        salaryInput.value = salary.toFixed(2);
+        
+        console.log('Edit page - Salary updated to:', salaryInput.value);
+        
+        // Visual feedback
+        salaryInput.style.backgroundColor = '#d4edda';
+        salaryInput.style.transition = 'background-color 0.3s ease';
+        
+        setTimeout(() => {
+          salaryInput.style.backgroundColor = '';
+        }, 500);
       });
+    }
 
-      const photoPreview = qs('photoPreview');
-      if (emp.photo && photoPreview) {
-        photoPreview.innerHTML = `<img class="photo-2x2" src="${emp.photo}">`;
-      }
+    // Photo preview
+    const photoPreview = qs('photoPreview');
+    if (emp.photo && photoPreview) {
+      photoPreview.innerHTML = `<img class="photo-2x2" src="${emp.photo}" style="max-width: 150px; border-radius: 8px;">`;
+    }
 
-      const filesList = qs('filesList');
-      if (filesList) {
-        filesList.innerHTML = '';
-        (emp.files || []).forEach((f, i) => {
-          const div = document.createElement('div');
-          const a = createDownloadLinkFromBase64(f.data, f.name);
-          div.appendChild(a);
-          const removeBtn = document.createElement('button');
-          removeBtn.textContent = ' Remove';
-          removeBtn.style.marginLeft = '8px';
-          removeBtn.addEventListener('click', async ()=> {
-            if (!confirm('Remove this uploaded file?')) return;
-            emp.files.splice(i,1);
-            const success = await updateEmployee(id, emp);
-            if (success) window.location.reload();
-          });
-          div.appendChild(removeBtn);
-          filesList.appendChild(div);
+    // Files list
+    const filesList = qs('filesList');
+    if (filesList) {
+      filesList.innerHTML = '';
+      (emp.files || []).forEach((f, i) => {
+        const div = document.createElement('div');
+        div.style.marginBottom = '8px';
+        
+        const a = createDownloadLinkFromBase64(f.data, f.name);
+        a.style.color = '#3b82f6';
+        a.style.textDecoration = 'none';
+        div.appendChild(a);
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '🗑 Remove';
+        removeBtn.type = 'button';
+        removeBtn.style.marginLeft = '12px';
+        removeBtn.style.padding = '4px 8px';
+        removeBtn.style.fontSize = '12px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.backgroundColor = '#ef4444';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '4px';
+        
+        removeBtn.addEventListener('click', async () => {
+          if (!confirm('Remove this uploaded file?')) return;
+          emp.files.splice(i, 1);
+          const success = await updateEmployee(id, emp);
+          if (success) window.location.reload();
         });
+        
+        div.appendChild(removeBtn);
+        filesList.appendChild(div);
+      });
+    }
+
+    // Form submit handler
+    const form = qs('employeeForm');
+    form && form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const photoInput = qs('empPhoto');
+      const filesInput = qs('empFiles');
+
+      let photoBase64 = emp.photo;
+      if (photoInput && photoInput.files && photoInput.files.length) {
+        photoBase64 = await toBase64(photoInput.files[0]);
       }
 
-      const form = qs('employeeForm');
-      form && form.addEventListener('submit', async (e)=> {
-        e.preventDefault();
-        const photoInput = qs('empPhoto');
-        const filesInput = qs('empFiles');
-
-        let photoBase64 = emp.photo;
-        if (photoInput && photoInput.files && photoInput.files.length) {
-          photoBase64 = await toBase64(photoInput.files[0]);
+      const filesArr = Array.isArray(emp.files) ? emp.files.slice() : [];
+      if (filesInput && filesInput.files && filesInput.files.length) {
+        for (let f of filesInput.files) {
+          const base = await toBase64(f);
+          filesArr.push({ name: f.name, data: base });
         }
+      }
 
-        const filesArr = Array.isArray(emp.files) ? emp.files.slice() : [];
-        if (filesInput && filesInput.files && filesInput.files.length) {
-          for (let f of filesInput.files) {
-            const base = await toBase64(f);
-            filesArr.push({ name: f.name, data: base });
-          }
-        }
+      const updated = {
+        empId: qs('empId').value.trim(),
+        email: qs('empEmail').value.trim(),
+        firstName: qs('firstName').value.trim(),
+        lastName: qs('lastName').value.trim(),
+        middleName: qs('middleName').value.trim() || '',
+        dob: qs('dob').value,
+        gender: qs('gender').value,
+        phone: qs('phone').value.trim(),
+        address: qs('address').value.trim(),
+        position: qs('Position').value.trim(),
+        department: qs('department').value.trim(),
+        dateHired: qs('dateHired').value,
+        status: qs('status').value,
+        salary: parseFloat(qs('salary').value),
+        photo: photoBase64,
+        files: filesArr
+      };
 
-        const updated = {
-          empId: qs('empId').value.trim(),
-          email: qs('empEmail').value.trim(),
-          firstName: qs('firstName').value.trim(),
-          lastName: qs('lastName').value.trim(),
-          middleName: qs('middleName').value.trim() || '',
-          dob: qs('dob').value,
-          gender: qs('gender').value,
-          phone: qs('phone').value.trim(),
-          address: qs('address').value.trim(),
-          position: qs('position').value.trim(),
-          department: qs('department').value.trim(),
-          dateHired: qs('dateHired').value,
-          status: qs('status').value,
-          salary: qs('salary').value,
-          photo: photoBase64,
-          files: filesArr
-        };
+      const success = await updateEmployee(id, updated);
+      if (success) {
+        window.location.href = 'employee.html';
+      }
+    });
 
-        const success = await updateEmployee(id, updated);
-        if (success) {
-          window.location.href = 'employee.html';
-        }
-      });
-
-      qs('cancelEdit') && qs('cancelEdit').addEventListener('click', ()=> window.location.href = 'employee.html');
-    })();
-  }
-
+    qs('cancelEdit') && qs('cancelEdit').addEventListener('click', () => window.location.href = 'employee.html');
+  })();
+}
   /* ========================= VIEW PAGE ========================= */
   if (isViewPage) {
     const id = getQueryParam('id');
