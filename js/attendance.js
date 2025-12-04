@@ -1,5 +1,6 @@
 // ==================== ATTENDANCE.JS - UNIVERSAL VERSION ====================
 // Works for both admin table view and employee clock in/out view
+// TIMEZONE: Asia/Manila (Philippines)
 // ==================== INITIAL SETUP ====================
 
 if (!window.supabaseClient) {
@@ -15,29 +16,48 @@ const isClockView = !!document.getElementById('btnClockInOut');
 
 console.log('Page type:', isTableView ? 'TABLE VIEW' : isClockView ? 'CLOCK VIEW' : 'UNKNOWN');
 
-// ==================== DATE FUNCTIONS ====================
+// ==================== DATE FUNCTIONS (PHILIPPINES TIMEZONE) ====================
 
 function getCurrentDate() {
+    // Get current date in Philippines timezone (Asia/Manila)
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const year = phTime.getFullYear();
+    const month = String(phTime.getMonth() + 1).padStart(2, '0');
+    const day = String(phTime.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
 function getCurrentTimestamp() {
-    return new Date().toISOString();
+    // Get current timestamp in Philippines timezone
+    const now = new Date();
+    const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return phTime.toISOString();
 }
 
 function formatTime(date = new Date()) {
     if (typeof date === 'string') {
         date = new Date(date);
     }
+    // Format time in Philippines timezone
     return date.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-        hour12: true
+        hour12: true,
+        timeZone: 'Asia/Manila'
+    });
+}
+
+function formatTimeFromISO(isoString) {
+    if (!isoString) return "--:--:--";
+    const date = new Date(isoString);
+    return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+        timeZone: 'Asia/Manila'
     });
 }
 
@@ -47,7 +67,8 @@ function formatTimeShort(isoString) {
     return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: 'Asia/Manila'
     });
 }
 
@@ -59,7 +80,8 @@ function formatDate(date = new Date()) {
         weekday: "long",
         month: "long",
         day: "numeric",
-        year: "numeric"
+        year: "numeric",
+        timeZone: 'Asia/Manila'
     });
 }
 
@@ -68,7 +90,8 @@ function formatDateShort(dateString) {
     return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'Asia/Manila'
     });
 }
 
@@ -460,12 +483,12 @@ async function refreshRecordsDisplay() {
 }
 
 function updateRecordsDisplay(records, activeRecord) {
-    const recordsGrid = document.querySelector('.records-grid-compact');
+    const recordsGrid = document.querySelector('.records-grid');
     if (!recordsGrid) return;
     
     if (!records || records.length === 0) {
         recordsGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 15px; color: #999; font-size: 11px;">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
                 No time entries yet today
             </div>
         `;
@@ -474,27 +497,27 @@ function updateRecordsDisplay(records, activeRecord) {
     
     const record = records[0];
     const timeIn = formatTimeFromISO(record.time_in);
-    const timeOut = record.time_out ? formatTimeFromISO(record.time_out) : '--:--';
+    const timeOut = record.time_out ? formatTimeFromISO(record.time_out) : '--:--:--';
     const isActive = record.time_out === null;
     const hours = record.time_out ? calculateHoursBetween(record.time_in, record.time_out) : 0;
     
     let html = `
-        <div class="time-record-compact in ${isActive ? 'active' : ''}">
-            <span class="record-label-compact">TIME IN</span>
-            <span class="record-time-compact">${timeIn}</span>
+        <div class="time-record in ${isActive ? 'active' : ''}">
+            <span class="record-label">TIME IN</span>
+            <span class="record-time">${timeIn}</span>
         </div>
-        <div class="time-record-compact out ${isActive ? 'active' : ''}">
-            <span class="record-label-compact">TIME OUT</span>
-            <span class="record-time-compact">${timeOut}</span>
-            ${record.time_out ? `<span class="record-duration-compact">${formatHours(hours)}</span>` : '<span class="record-duration-compact" style="color:#f39c12;">Active</span>'}
+        <div class="time-record out ${isActive ? 'active' : ''}">
+            <span class="record-label">TIME OUT</span>
+            <span class="record-time">${timeOut}</span>
+            ${record.time_out ? `<span class="record-duration">${formatHours(hours)}</span>` : '<span class="record-duration" style="color:#f39c12;">Active</span>'}
         </div>
     `;
     
     if (record.time_out) {
         html += `
-            <div class="time-record-compact total">
-                <span class="record-label-compact">TOTAL HOURS TODAY</span>
-                <span class="record-time-compact">${formatHours(hours)}</span>
+            <div class="time-record total" style="grid-column: 1 / -1; background: #e8f5e9; border: 2px solid #4caf50;">
+                <span class="record-label" style="font-weight: bold; font-size: 16px;">TOTAL HOURS TODAY</span>
+                <span class="record-time" style="font-weight: bold; font-size: 20px; color: #2e7d32;">${formatHours(hours)}</span>
             </div>
         `;
     }
@@ -535,6 +558,10 @@ async function handleTimeIn() {
     const today = getCurrentDate();
     const now = getCurrentTimestamp();
 
+    console.log('🟢 CLOCK IN (Philippines Time)');
+    console.log('Date:', today);
+    console.log('Time:', now);
+
     try {
         const allTodayRecords = await getAllTodayRecords(currentEmployee.empId);
         
@@ -559,6 +586,7 @@ async function handleTimeIn() {
 
         if (error) throw error;
 
+        console.log('✅ Clocked in successfully');
         showAlert('✅ Clocked In Successfully!', 'success');
         setTimeout(() => refreshRecordsDisplay(), 500);
         
@@ -575,6 +603,9 @@ async function handleTimeOut() {
     }
 
     const now = getCurrentTimestamp();
+
+    console.log('🔴 CLOCK OUT (Philippines Time)');
+    console.log('Time:', now);
 
     try {
         const activeRecord = await getTodayActiveRecord(currentEmployee.empId);
@@ -594,6 +625,7 @@ async function handleTimeOut() {
         if (error) throw error;
 
         const duration = calculateHoursBetween(activeRecord.time_in, now);
+        console.log('✅ Clocked out successfully');
         showAlert(`✅ Clocked Out! Session: ${formatHours(duration)}`, 'success');
         setTimeout(() => refreshRecordsDisplay(), 500);
         
@@ -605,11 +637,17 @@ async function handleTimeOut() {
 
 function startClock() {
     const timeEl = document.getElementById('currentTime');
+    const dateEl = document.getElementById('currentDate');
+    
     if (timeEl) {
         timeEl.textContent = formatTime();
         setInterval(() => {
             timeEl.textContent = formatTime();
         }, 1000);
+    }
+    
+    if (dateEl) {
+        dateEl.textContent = formatDate();
     }
 }
 
@@ -681,61 +719,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    console.log('✅ Attendance System Initializing...');
+    console.log('✅ Attendance System Initializing (Philippines Timezone)...');
 
     // ==================== TABLE VIEW INITIALIZATION ====================
-   // ==================== TABLE VIEW INITIALIZATION ====================
-if (isTableView) {
-    console.log('📊 Initializing TABLE VIEW');
+    if (isTableView) {
+        console.log('📊 Initializing TABLE VIEW');
 
-    let allRecords = [];
-    const dateInput = document.getElementById('attendanceDate');
-    const searchInput = document.getElementById('search');
+        let allRecords = [];
+        const dateInput = document.getElementById('attendanceDate');
+        const searchInput = document.getElementById('search');
 
-    // Get logged-in user info
-    const loggedInUserString = localStorage.getItem('loggedInUser');
-    let loggedInUser = null;
-    let userRole = 'Employee';
-    let userEmployeeId = null;
+        // Get logged-in user info
+        const loggedInUserString = localStorage.getItem('loggedInUser');
+        let loggedInUser = null;
+        let userRole = 'Employee';
+        let userEmployeeId = null;
 
-    if (loggedInUserString) {
-        loggedInUser = JSON.parse(loggedInUserString);
-        userRole = loggedInUser.role || 'Employee';
-        userEmployeeId = loggedInUser.empId || loggedInUser.employee_id;
-    }
-
-    console.log('👤 Table View User:', {
-        role: userRole,
-        employeeId: userEmployeeId
-    });
-
-    const today = getCurrentDate();
-    if (dateInput) {
-        dateInput.value = today;
-    }
-
-    async function loadTableData() {
-        const selectedDate = dateInput ? dateInput.value : today;
-        allRecords = await fetchAttendanceRecords(selectedDate);
-        
-        // 🔒 FILTER BY USER ROLE
-        let filteredByRole = allRecords;
-        
-        if (userRole === 'Employee' || userRole === 'Dispatcher' || userRole === 'Driver') {
-            // Show only their own records
-            filteredByRole = allRecords.filter(record => 
-                record.employee_id === userEmployeeId
-            );
-            console.log(`🔒 Employee view: Filtered to ${filteredByRole.length} own records`);
-        } else {
-            console.log(`👔 Admin/HR/Manager view: Showing all ${allRecords.length} records`);
+        if (loggedInUserString) {
+            loggedInUser = JSON.parse(loggedInUserString);
+            userRole = loggedInUser.role || 'Employee';
+            userEmployeeId = loggedInUser.empId || loggedInUser.employee_id;
         }
-        
-        const searchTerm = searchInput ? searchInput.value : '';
-        const filteredRecords = filterRecords(filteredByRole, searchTerm);
-        
-        await renderAttendanceTable(filteredRecords);
-    }
+
+        console.log('👤 Table View User:', {
+            role: userRole,
+            employeeId: userEmployeeId
+        });
+
+        const today = getCurrentDate();
+        if (dateInput) {
+            dateInput.value = today;
+        }
+
+        async function loadTableData() {
+            const selectedDate = dateInput ? dateInput.value : today;
+            allRecords = await fetchAttendanceRecords(selectedDate);
+            
+            // 🔒 FILTER BY USER ROLE
+            let filteredByRole = allRecords;
+            
+            if (userRole === 'Employee' || userRole === 'Dispatcher' || userRole === 'Driver') {
+                // Show only their own records
+                filteredByRole = allRecords.filter(record => 
+                    record.employee_id === userEmployeeId
+                );
+                console.log(`🔒 Employee view: Filtered to ${filteredByRole.length} own records`);
+            } else {
+                console.log(`👔 Admin/HR/Manager view: Showing all ${allRecords.length} records`);
+            }
+            
+            const searchTerm = searchInput ? searchInput.value : '';
+            const filteredRecords = filterRecords(filteredByRole, searchTerm);
+            
+            await renderAttendanceTable(filteredRecords);
+        }
+
         await loadTableData();
 
         if (dateInput) {

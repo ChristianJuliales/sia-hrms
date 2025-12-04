@@ -8,20 +8,23 @@ if (!window.supabaseClient) {
 const supabase = window.supabaseClient;
 let currentEmployee = null;
 
-// ==================== IMPROVED DATE FUNCTIONS ====================
+// ==================== IMPROVED DATE FUNCTIONS (PHILIPPINES TIMEZONE) ====================
 
-// Get current date in YYYY-MM-DD format (LOCAL timezone)
+// Get current date in YYYY-MM-DD format (PHILIPPINES timezone)
 function getCurrentDate() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    const year = phTime.getFullYear();
+    const month = String(phTime.getMonth() + 1).padStart(2, '0');
+    const day = String(phTime.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
-// Get current timestamp in ISO format
+// Get current timestamp in ISO format (PHILIPPINES timezone)
 function getCurrentTimestamp() {
-    return new Date().toISOString();
+    const now = new Date();
+    const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    return phTime.toISOString();
 }
 
 // ==================== FETCH EMPLOYEE FROM SUPABASE ====================
@@ -138,30 +141,44 @@ function formatHours(hours) {
     return `${h}h ${m}m`;
 }
 
-// ==================== FORMATTING HELPERS ====================
+// ==================== FORMATTING HELPERS (PHILIPPINES TIMEZONE) ====================
 
 function formatTime(date = new Date()) {
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
     return date.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-        hour12: true
+        hour12: true,
+        timeZone: "Asia/Manila"
     });
 }
 
 function formatDate(date = new Date()) {
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
     return date.toLocaleDateString("en-US", {
         weekday: "long",
         month: "long",
         day: "numeric",
-        year: "numeric"
+        year: "numeric",
+        timeZone: "Asia/Manila"
     });
 }
 
 function formatTimeFromISO(isoString) {
     if (!isoString) return "--:--:--";
     const date = new Date(isoString);
-    return formatTime(date);
+    return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Manila"
+    });
 }
 
 // ==================== MODAL MANAGEMENT ====================
@@ -189,7 +206,6 @@ function createInitialAvatar(firstName, lastName) {
 
 async function refreshRecordsDisplay() {
     if (!currentEmployee) {
-        // Clear display when no employee
         document.querySelector('.records-grid').innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #999;">
                 Enter Employee ID to view records
@@ -296,7 +312,7 @@ async function handleTimeIn() {
     const today = getCurrentDate();
     const now = getCurrentTimestamp();
 
-    console.log('🟢 CLOCK IN ATTEMPT');
+    console.log('🟢 CLOCK IN ATTEMPT (PH TIME)');
     console.log('Employee:', currentEmployee.empId);
     console.log('Date:', today);
     console.log('Timestamp:', now);
@@ -348,7 +364,7 @@ async function handleTimeOut() {
 
     const now = getCurrentTimestamp();
     
-    console.log('🔴 CLOCK OUT ATTEMPT');
+    console.log('🔴 CLOCK OUT ATTEMPT (PH TIME)');
     console.log('Employee:', currentEmployee.empId);
     console.log('Timestamp:', now);
 
@@ -384,10 +400,22 @@ async function handleTimeOut() {
 // ==================== CLOCK ====================
 
 function startClock() {
-    document.getElementById('currentTime').textContent = formatTime();
-    setInterval(() => {
-        document.getElementById('currentTime').textContent = formatTime();
-    }, 1000);
+    const timeEl = document.getElementById('currentTime');
+    const dateEl = document.getElementById('currentDate');
+    
+    if (timeEl) {
+        const updateClock = () => {
+            const now = new Date();
+            const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            timeEl.textContent = formatTime(phTime);
+            if (dateEl) {
+                dateEl.textContent = formatDate(phTime);
+            }
+        };
+        
+        updateClock();
+        setInterval(updateClock, 1000);
+    }
 }
 
 // ==================== INITIALIZATION ====================
@@ -400,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    console.log('✅ Time In/Out System Initialized');
+    console.log('✅ Time In/Out System Initialized (Philippines Time)');
     console.log('📅 Current Date:', getCurrentDate());
 
     document.getElementById('currentDate').textContent = formatDate();
